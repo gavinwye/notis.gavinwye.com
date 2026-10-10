@@ -1,0 +1,16 @@
+{
+  "name": "comments",
+  "version": "0.1.0",
+  "description": "Select text on any page and leave a shared, threaded comment on it. One script, one small serverless function.",
+  "type": "module",
+  "license": "MIT",
+  "repository": "github:gavinwye/comments.gavinwye.com",
+  "homepage": "https://comments.gavinwye.com",
+  "scripts": {
+    "dev": "netlify dev",
+    "deploy": "netlify deploy --prod"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^10.7.9"
+  }
+}

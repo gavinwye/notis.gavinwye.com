@@ -1,0 +1,6 @@
+# The website for comments.gavinwye.com. In Netlify, set this project's base
+# directory to `site`. It has no function: the demo keeps comments in the
+# visitor's browser, so nobody can post to a server from the public page.
+[build]
+  command = "cp ../public/comments.js comments.js"
+  publish = "."

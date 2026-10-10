@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comments</title>
+<meta name="description" content="Select text on any page and leave a comment on those exact words. One script, one small function, no accounts.">
+<meta property="og:title" content="Comments">
+<meta property="og:description" content="Select text on any page and leave a comment on those exact words.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23ffc726'/><path d='M7 9h18v11H15l-5 4v-4H7z' fill='%230b0c0c'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#0b0c0c; --muted:#4b5559; --line:#d8dde0; --paper:#fff; --tint:#f6f7f8;
+    --mark:#fff3c4; --markline:#ffc726; --link:#1d5fa3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#f1f3f4; --muted:#aab3b7; --line:#2f373b; --paper:#111517; --tint:#181d20; --mark:#4a3d0c; --link:#7db4ec; }
+  }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; font-family:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--paper); line-height:1.6; font-size:18px; }
+  a { color:var(--link); }
+  .wrap { max-width:720px; margin:0 auto; padding:0 20px; }
+  header { padding:20px 0; border-bottom:1px solid var(--line); }
+  header .wrap { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .brand { font-weight:800; font-size:20px; text-decoration:none; color:var(--ink); display:flex; align-items:center; gap:10px; }
+  .brand i { width:24px; height:24px; border-radius:6px; background:var(--markline); display:inline-block; }
+  nav { white-space:nowrap; }
+  nav a { margin-left:16px; font-size:16px; font-weight:600; text-decoration:none; }
+  nav a:hover { text-decoration:underline; }
+  .hero { padding:64px 0 40px; }
+  h1 { font-size:clamp(34px,6vw,52px); line-height:1.1; letter-spacing:-.02em; font-weight:800; margin:0 0 20px; }
+  h1 mark { background:var(--mark); color:inherit; border-bottom:3px solid var(--markline); padding:0 .08em; }
+  .lede { font-size:21px; color:var(--muted); margin:0 0 28px; max-width:34em; }
+  .try { background:var(--tint); border:1px solid var(--line); border-left:4px solid var(--markline); border-radius:6px; padding:16px 20px; font-size:17px; margin:0 0 8px; }
+  .try b { font-weight:700; }
+  .small { font-size:15px; color:var(--muted); margin:8px 0 0; }
+  section { padding:36px 0; border-top:1px solid var(--line); }
+  h2 { font-size:26px; line-height:1.2; margin:0 0 14px; letter-spacing:-.01em; }
+  p { margin:0 0 16px; }
+  ol.steps { padding-left:0; list-style:none; counter-reset:s; margin:0; }
+  ol.steps li { counter-increment:s; padding-left:44px; position:relative; margin:0 0 14px; }
+  ol.steps li::before { content:counter(s); position:absolute; left:0; top:2px; width:30px; height:30px; border-radius:50%; background:var(--ink); color:var(--paper); font-weight:700; font-size:15px; display:grid; place-items:center; }
+  pre { background:#0f1416; color:#e8eef0; padding:16px 18px; border-radius:6px; overflow-x:auto; font-size:15px; line-height:1.5; margin:0 0 16px; }
+  code { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.9em; }
+  p code, li code { background:var(--tint); border:1px solid var(--line); padding:1px 6px; border-radius:4px; }
+  ul.plain { padding-left:20px; margin:0 0 16px; }
+  ul.plain li { margin:0 0 8px; }
+  .cols { display:grid; gap:20px; grid-template-columns:1fr 1fr; }
+  @media (max-width:640px) { .cols { grid-template-columns:1fr; } .hero { padding-top:40px; } body { font-size:17px; } }
+  .cols div { background:var(--tint); border:1px solid var(--line); border-radius:6px; padding:16px 18px; }
+  .cols h3 { margin:0 0 6px; font-size:18px; }
+  .cols p { margin:0; font-size:16px; color:var(--muted); }
+  footer { padding:28px 0 80px; border-top:1px solid var(--line); color:var(--muted); font-size:15px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="/"><i aria-hidden="true"></i>Comments</a>
+    <nav>
+      <a href="#install">Install</a>
+      <a href="#limits">Limits</a>
+      <a href="https://github.com/gavinwye/comments.gavinwye.com">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <h1>Review a page by commenting on <mark>the exact words</mark>.</h1>
+    <p class="lede">Select text on any page and say what you think of it. The comment stays attached to those words, and everyone who opens the page sees it.</p>
+    <p class="try"><b>Try it on this page.</b> Select any sentence here, then click the <b>Comment</b> button that appears.</p>
+    <p class="small">On this page, comments are saved in your browser only. On your own site they're shared.</p>
+  </div>
+
+  <section>
+    <h2>Why it exists</h2>
+    <p>Reviewing a prototype by email gets you vague notes: "the second paragraph feels off". It's slow to work out which paragraph, and what was meant.</p>
+    <p>With this, the reviewer selects the words they mean and writes what's wrong. You get the words and the comment together, in one list, without anyone needing an account.</p>
+    <p>It started as a way to get quick reactions to early government service prototypes. Nothing in it is specific to government.</p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><b>Select.</b> A reviewer highlights text and writes a comment.</li>
+      <li><b>Discuss.</b> A side panel lists every thread. People reply, and resolve what's done.</li>
+      <li><b>Fix.</b> Open comments are plain JSON. You, a script or an AI assistant can read them, change the page, and mark them resolved.</li>
+    </ol>
+  </section>
+
+  <section id="install">
+    <h2>Add it to a page</h2>
+    <p>One line before <code>&lt;/body&gt;</code>:</p>
+    <pre><code>&lt;script src="/comments.js" defer&gt;&lt;/script&gt;</code></pre>
+    <p>Comments are stored by a small serverless function in the same repo. Deploy it to Netlify, set an admin token, and you're done. There's no database and nothing to build.</p>
+    <p><a href="https://github.com/gavinwye/comments.gavinwye.com#readme">Setup, options and the API are in the README.</a></p>
+  </section>
+
+  <section>
+    <h2>What you get</h2>
+    <div class="cols">
+      <div><h3>Anchored to text</h3><p>Comments find their words again when the page loads, and survive small edits.</p></div>
+      <div><h3>Threads</h3><p>Replies, resolve and reopen, and a toggle for resolved ones.</p></div>
+      <div><h3>No accounts</h3><p>People type a name. You decide who can load the page.</p></div>
+      <div><h3>One file, no dependencies</h3><p>The widget injects its own styles. It works with any site, any framework.</p></div>
+    </div>
+  </section>
+
+  <section id="limits">
+    <h2>What it doesn't do</h2>
+    <ul class="plain">
+      <li><b>No sign-in.</b> Anyone who can load the page can comment. Put review copies behind a password or a preview URL.</li>
+      <li><b>No notifications.</b> Nobody is emailed. You look at the panel or read the API.</li>
+      <li><b>Not for busy pages.</b> It's built for a handful of reviewers, not a public comment section.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Made by <a href="https://gavinwye.com">Gavin Wye</a>. MIT licensed. <a href="https://github.com/gavinwye/comments.gavinwye.com">Source on GitHub</a>.</div>
+</footer>
+
+<script>window.COMMENTS_CONFIG = { apiBase: null, pageId: "demo", root: "main" };</script>
+<script src="/comments.js" defer></script>
+</body>
+</html>

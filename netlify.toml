@@ -1,0 +1,9 @@
+[build]
+  publish = "public"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# The function declares its own routes via `export const config.path`,
+# so /api/comments is handled without an explicit redirect.
