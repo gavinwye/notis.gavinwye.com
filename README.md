@@ -15,6 +15,7 @@ It was built to get fast reactions to early prototypes.
 ## What you get
 
 - **Comments on the exact words.** Select text, write a comment. The highlight stays on that text if the page changes slightly.
+- **Pins on images.** Choose Pin on image in the panel and click the spot you mean. The pin stays at that point when the image is resized.
 - **Threads.** Replies, resolve and reopen, and a toggle to show resolved ones.
 - **Shared.** Everyone who opens the page sees the same comments.
 - **A JSON API.** A script (or an AI assistant) can read the open comments and work through them. See [Closing the loop](#closing-the-loop).
@@ -58,6 +59,7 @@ Set them with a global before the script, or with `data-*` attributes on the tag
 | `apiBase` | `"/api"` | Where the API lives. Set `null` to keep comments in this browser only (not shared). |
 | `pageId` | the URL path | The thread list for this page. Pages with the same `pageId` share threads. |
 | `root` | `"body"` | CSS selector for the region people can comment on. |
+| `pins` | `true` | Let reviewers drop a pin on an image. Set `false` to turn it off. |
 | `dock` | `false` | Push the page over to make room for the panel, rather than covering it. |
 | `supabase` | `null` | `{ url, anonKey }` to use Supabase instead of the Netlify function. |
 
@@ -92,11 +94,13 @@ The only dependency is `@netlify/blobs`.
 | Request | Body | Returns |
 |---|---|---|
 | `GET /api/comments?page=<pageId>` | | `[thread, ...]` (all pages if `page` is left off) |
-| `POST /api/comments` | `{ pageId, quote, prefix, suffix, author, text }` | the new thread |
+| `POST /api/comments` | `{ pageId, quote, prefix, suffix, author, text, pin? }` | the new thread |
 | `POST /api/comments/:id/replies` | `{ author, text }` | the new reply |
 | `PATCH /api/comments/:id` | `{ resolved }` | the updated thread |
 | `DELETE /api/comments/:id` | | removes one thread (admin token) |
 | `DELETE /api/comments` | | removes everything (admin token) |
+
+A pin is `{ src, alt, i, x, y }`: the image's `src`, its `alt` text, its position among the page's images, and the point as fractions (0 to 1) of the image's width and height. A pinned thread has an empty `quote`.
 
 The server sets `id`, `createdAt`, `resolved` and `replies`. Whatever the client sends for those is ignored. Every field is length-capped and bad input gets a `400`.
 
@@ -145,6 +149,8 @@ Worth knowing before you rely on it.
 - **No notifications.** Nobody is emailed. You look at the panel, or read the API.
 - **Not for high traffic.** All threads live in one blob, so two writes at the same instant can overwrite each other. That's fine for a handful of reviewers, not for a public comment section.
 - **Text that moves a lot loses its anchor.** The comment survives; the highlight doesn't.
+- **Pins are for `<img>` elements.** Not CSS backgrounds or inline SVG. A pin finds its image by `src`, so if the image changes, the pin is shown as lost.
+- **Pins need the Netlify function or localStorage.** The Supabase adapter would need a `pin` column.
 
 ## Layout
 

@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 
 // Serves the comment-widget API contract (matches public/comments.js ApiStore):
 //   GET    /api/comments?page=<pageId>          -> [thread, ...]
-//   POST   /api/comments            body:{pageId,quote,prefix,suffix,author,text} -> thread
+//   POST   /api/comments            body:{pageId,quote,prefix,suffix,author,text[,pin]} -> thread
 //   POST   /api/comments/:id/replies body:{author,text} -> reply
 //   PATCH  /api/comments/:id        body:{resolved} -> thread
 //   DELETE /api/comments/:id                    -> moderation (remove one)
@@ -28,7 +28,7 @@ const ALLOWED = (process.env.COMMENTS_ALLOWED_ORIGINS || "")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 // Field size caps — keep stored blobs and rendering bounded.
-const LIMITS = { pageId: 200, quote: 800, prefix: 200, suffix: 200, author: 80, text: 4000, replies: 1000 };
+const LIMITS = { src: 500, alt: 200, pageId: 200, quote: 800, prefix: 200, suffix: 200, author: 80, text: 4000, replies: 1000 };
 const MAX_BODY = 64 * 1024; // hard cap on request body bytes, enforced before JSON.parse
 
 const clip = (v, max) => (v == null ? "" : String(v)).slice(0, max);
@@ -104,6 +104,18 @@ export default async (req) => {
       const text = clip(b.text, LIMITS.text).trim();
       if (!pageId) return json({ error: "pageId is required" }, 400);
       if (!text) return json({ error: "text is required" }, 400);
+      // A pin is a point on an image: the image's src and position in the page,
+      // plus x/y as fractions (0 to 1) of the image, so it survives resizing.
+      let pin;
+      if (b.pin && typeof b.pin === "object") {
+        const x = Number(b.pin.x), y = Number(b.pin.y), i = Number(b.pin.i);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1) {
+          return json({ error: "pin x and y must be between 0 and 1" }, 400);
+        }
+        const src = clip(b.pin.src, LIMITS.src).trim();
+        if (!src) return json({ error: "pin src is required" }, 400);
+        pin = { src, alt: clip(b.pin.alt, LIMITS.alt), i: Number.isInteger(i) && i >= 0 && i < 10000 ? i : 0, x, y };
+      }
       // Server owns id/createdAt/resolved/replies — client-supplied values are ignored.
       const thread = {
         id: newId(), pageId,
@@ -112,6 +124,7 @@ export default async (req) => {
         suffix: clip(b.suffix, LIMITS.suffix),
         author: clip(b.author, LIMITS.author).trim() || "Anonymous",
         text,
+        ...(pin ? { pin } : {}),
         createdAt: Date.now(), resolved: false, replies: [],
       };
       all.push(thread);

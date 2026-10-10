@@ -26,6 +26,7 @@
      root      CSS selector for the commentable region  (default "body")
      dock      true to dock the panel beside the page, pushing content
                over instead of covering it              (default false)
+     pins      true to let reviewers drop a pin on an image   (default true)
      supabase  { url, anonKey } to use Supabase instead of the API
                (leave null to use apiBase; set apiBase null to fall back
                to browser-only localStorage)
@@ -61,12 +62,14 @@
     apiBase: "/api",
     pageId: defaultPath,
     root: "body",
-    dock: false
+    dock: false,
+    pins: true
   }, window.COMMENTS_CONFIG || {});
 
   if (dataAttr("data-api-base") != null) COMMENTS_CONFIG.apiBase = dataAttr("data-api-base");
   if (dataAttr("data-page-id") != null) COMMENTS_CONFIG.pageId = dataAttr("data-page-id");
   if (dataAttr("data-root") != null) COMMENTS_CONFIG.root = dataAttr("data-root");
+  if (dataAttr("data-pins") != null) COMMENTS_CONFIG.pins = dataAttr("data-pins") !== "false";
   if (dataAttr("data-dock") != null) COMMENTS_CONFIG.dock = dataAttr("data-dock") !== "false";
 
   /* ---------- storage adapters (async, Promise-based) ---------- */
@@ -217,6 +220,7 @@
     var located = [];
     found = {};
     threads.forEach(function (t) {
+      if (t.pin) return; // pinned to an image; renderPins() places these
       var loc = locate(ix, t);
       if (loc) found[t.id] = true;
       if (t.resolved && !showResolved) return;
@@ -231,6 +235,72 @@
     });
   }
 
+
+  /* ---------- pins on images ---------- */
+  function rootImages() {
+    return Array.prototype.filter.call(rootEl().querySelectorAll("img"), function (im) { return !im.closest("[data-cmt]"); });
+  }
+  function findImage(pin) {
+    var imgs = rootImages(), same = imgs.filter(function (im) { return im.getAttribute("src") === pin.src; });
+    if (imgs[pin.i] && imgs[pin.i].getAttribute("src") === pin.src) return imgs[pin.i];
+    return same[0] || null;
+  }
+  function imageLabel(pin) {
+    if (pin.alt) return pin.alt;
+    var name = String(pin.src || "").split("?")[0].split("/").pop();
+    return name || "image";
+  }
+  var pinEls = [];
+  function renderPins() {
+    pinEls.forEach(function (e) { e.remove(); }); pinEls = [];
+    var pinned = threads.filter(function (t) { return t.pin; })
+      .sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    pinned.forEach(function (t, n) {
+      var img = findImage(t.pin);
+      found[t.id] = !!img;
+      t.pinNumber = n + 1;
+      if (!img || (t.resolved && !showResolved)) return;
+      var r = img.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      var b = el("button", "cmt-pin", String(n + 1));
+      b.dataset.thread = t.id; if (t.resolved) b.setAttribute("data-resolved", "1");
+      b.setAttribute("aria-label", "Comment " + (n + 1) + " on " + imageLabel(t.pin));
+      b.style.left = (window.scrollX + r.left + t.pin.x * r.width) + "px";
+      b.style.top = (window.scrollY + r.top + t.pin.y * r.height) + "px";
+      b.addEventListener("click", function (e) { e.stopPropagation(); openPanel(); focusThread(t.id); });
+      document.body.appendChild(b); pinEls.push(b);
+    });
+  }
+  var pinMode = false, pinHint = null, pinBtn = null;
+  function setPinMode(on) {
+    pinMode = !!on;
+    document.documentElement.classList.toggle("cmt-pinning", pinMode);
+    if (pinBtn) { pinBtn.setAttribute("aria-pressed", pinMode ? "true" : "false"); pinBtn.classList.toggle("cmt-on", pinMode); }
+    if (pinHint) { pinHint.remove(); pinHint = null; }
+    if (pinMode) {
+      removeSelBtn(); removeComposer();
+      pinHint = el("div", "cmt-pinhint", rootImages().length
+        ? "Click an image to drop a pin. Press Esc to cancel."
+        : "There are no images on this page to pin to.");
+      document.body.appendChild(pinHint);
+    }
+  }
+  document.addEventListener("click", function (e) {
+    if (!pinMode) return;
+    var img = e.target && e.target.closest ? e.target.closest("img") : null;
+    if (!img || img.closest("[data-cmt]") || !rootEl().contains(img)) return;
+    e.preventDefault(); e.stopPropagation();
+    var r = img.getBoundingClientRect();
+    var x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    var y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    var pin = { src: img.getAttribute("src") || "", i: rootImages().indexOf(img), alt: img.getAttribute("alt") || "", x: x, y: y };
+    setPinMode(false);
+    openComposer({ quote: "", prefix: "", suffix: "", pin: pin }, { bottom: e.clientY, left: e.clientX });
+  }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && pinMode) setPinMode(false); });
+  window.addEventListener("resize", function () { renderPins(); });
+  window.addEventListener("load", function () { renderPins(); });
+
   /* ---------- state ---------- */
   var threads = [], showResolved = false, found = {};
 
@@ -239,6 +309,7 @@
       threads = list || [];
       clearHighlights();
       applyHighlights();
+      renderPins();
       renderPanel();
       updateCount();
     });
@@ -284,6 +355,12 @@
       '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:2px solid #0b0c0c;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
       '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;resize:vertical;min-height:72px;box-sizing:border-box;outline:0}.cmt-composer textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;margin:0 0 10px;box-sizing:border-box;outline:0}.cmt-composer input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-composer .cmt-label{display:block;font-size:14px;font-weight:700;color:#0b0c0c;margin:0 0 6px}' +
       '.cmt-composer .cmt-row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}' +
+      '.cmt-pin{position:absolute;z-index:9002;width:28px;height:28px;margin:-14px 0 0 -14px;padding:0;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;font:700 14px/1 "Figtree",arial,sans-serif;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.35)}' +
+      '.cmt-pin:hover{background:#ffd94d}.cmt-pin:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}.cmt-pin[data-resolved]{background:#eef0f2}' +
+      '.cmt-pin.cmt-flash{animation:cmtPin 1.2s ease}@keyframes cmtPin{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}' +
+      'html.cmt-pinning img{cursor:crosshair !important;outline:3px dashed #ffc726;outline-offset:3px}' +
+      '.cmt-pinhint{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9004;background:#0b0c0c;color:#fff;padding:10px 16px;font-size:15px;font-weight:600}' +
+      '.cmt-head .cmt-pinbtn{background:#0b0c0c;color:#fff;border:0;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}.cmt-head .cmt-pinbtn.cmt-on{background:#fff;color:#0b0c0c;box-shadow:inset 0 0 0 2px #0b0c0c}' +
       '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer}';
     document.head.appendChild(css);
 
@@ -295,7 +372,13 @@
     panel = el('aside', 'cmt-panel'); panel.setAttribute('data-cmt', 'panel'); panel.setAttribute('aria-label', 'Comments');
     var head = el('div', 'cmt-head');
     var h2 = el('h2', '', 'Comments'); var close = el('button', '', '×'); close.setAttribute('aria-label', 'Close comments');
-    close.addEventListener('click', closePanel); head.appendChild(h2); head.appendChild(close);
+    close.addEventListener('click', closePanel); head.appendChild(h2);
+    if (COMMENTS_CONFIG.pins) {
+      pinBtn = el('button', 'cmt-pinbtn', 'Pin on image'); pinBtn.setAttribute('aria-pressed', 'false');
+      pinBtn.addEventListener('click', function () { setPinMode(!pinMode); });
+      head.appendChild(pinBtn);
+    }
+    head.appendChild(close);
     var sub = el('div', 'cmt-sub');
     resolvedChk = el('input'); resolvedChk.type = 'checkbox'; resolvedChk.id = 'cmt-showres';
     resolvedChk.addEventListener('change', function () { showResolved = resolvedChk.checked; refresh(); });
@@ -328,13 +411,16 @@
     listEl.innerHTML = '';
     var visible = threads.filter(function (t) { return showResolved || !t.resolved; });
     if (!visible.length) {
-      listEl.appendChild(el('div', 'cmt-empty', 'No comments yet. Select any text on the page to start one.'));
+      listEl.appendChild(el('div', 'cmt-empty', COMMENTS_CONFIG.pins ? 'No comments yet. Select any text on the page to start one, or pin one to an image.' : 'No comments yet. Select any text on the page to start one.'));
       return;
     }
     visible.forEach(function (t) {
       var box = el('div', 'cmt-thread'); box.dataset.thread = t.id; if (t.resolved) box.setAttribute('data-resolved', '1');
-      var q = el('div', 'cmt-quote', '“' + t.quote + '”'); box.appendChild(q);
-      if (!found[t.id]) box.appendChild(el('div', 'cmt-lost', 'This text has changed since the comment was left.'));
+      var q = t.pin
+        ? el('div', 'cmt-quote', 'Pin ' + (t.pinNumber || '') + ' on ' + imageLabel(t.pin))
+        : el('div', 'cmt-quote', '“' + t.quote + '”');
+      box.appendChild(q);
+      if (!found[t.id]) box.appendChild(el('div', 'cmt-lost', t.pin ? 'This image is no longer on the page.' : 'This text has changed since the comment was left.'));
       box.appendChild(msg(t.author, t.text, t.createdAt));
       (t.replies || []).forEach(function (r) { box.appendChild(msg(r.author, r.text, r.createdAt)); });
       var actions = el('div', 'cmt-actions');
@@ -387,6 +473,13 @@
     flash(id);
   }
   function flash(id) {
+    var pe = document.querySelector('.cmt-pin[data-thread="' + cssId(id) + '"]');
+    if (pe) {
+      pe.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+      pe.classList.add('cmt-flash'); setTimeout(function () { pe.classList.remove('cmt-flash'); }, 1200);
+      emit('comments:focus', { el: pe });
+      return;
+    }
     var m = document.querySelector('mark.cmt-hl[data-thread="' + cssId(id) + '"]');
     if (m) {
       m.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
@@ -452,7 +545,7 @@
       saveName(who);
       var thread = {
         id: uid(), pageId: COMMENTS_CONFIG.pageId, quote: saved.quote,
-        prefix: saved.prefix, suffix: saved.suffix, author: who,
+        prefix: saved.prefix, suffix: saved.suffix, pin: saved.pin || undefined, author: who,
         text: v, createdAt: Date.now(), resolved: false, replies: []
       };
       store.create(thread).then(function (created) {
