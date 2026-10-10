@@ -13,7 +13,7 @@ It's one script on the page and one small function behind it. There's no databas
 
 ## Where it started
 
-I first used it on early government service prototypes in Barbados. A stakeholder could mark up exactly the words they were reacting to, instead of sending notes back later. Nothing in it is specific to government, and it has since gone onto a lot of the sites and prototypes I build.
+I first used it on early service prototypes. A stakeholder could mark up exactly the words they were reacting to, instead of sending notes back later. It has since gone onto a lot of the sites and prototypes I build.
 
 ## The part I use most
 
