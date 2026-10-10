@@ -28,8 +28,8 @@
   header .wrap { display:flex; justify-content:space-between; align-items:center; gap:16px; }
   .brand { font-weight:800; font-size:20px; text-decoration:none; color:var(--ink); display:flex; align-items:center; gap:10px; }
   .brand i { width:24px; height:24px; background:var(--markline); display:inline-block; }
-  nav { white-space:nowrap; }
-  nav a { margin-left:16px; font-size:16px; font-weight:600; }
+  nav { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px 16px; }
+  nav a { white-space:nowrap; font-size:16px; font-weight:600; }
   nav a:hover { text-decoration:underline; }
   .hero { padding:64px 0 40px; }
   h1 { font-size:clamp(34px,6vw,52px); line-height:1.1; letter-spacing:-.02em; font-weight:800; margin:0 0 20px; }
@@ -54,16 +54,20 @@
   .cols div { background:var(--tint); border:1px solid var(--line); padding:16px 18px; }
   .cols h3 { margin:0 0 6px; font-size:18px; }
   .cols p { margin:0; font-size:16px; color:var(--muted); }
+  @media (max-width:560px) { header .wrap { flex-direction:column; align-items:flex-start; } nav { justify-content:flex-start; } }
+  .top { margin:20px 0 0; font-size:15px; text-align:right; }
+  section[id] { scroll-margin-top:16px; }
   footer { padding:28px 0 80px; border-top:1px solid var(--line); color:var(--muted); font-size:15px; }
 </style>
 </head>
-<body>
+<body id="top">
 <header>
   <div class="wrap">
     <a class="brand" href="/"><i aria-hidden="true"></i>Comments</a>
-    <nav>
-      <a href="#install">Install</a>
-      <a href="#limits">Limits</a>
+    <nav aria-label="On this page">
+      <a href="#how-it-works">How it works</a>
+      <a href="#add-it-to-a-page">Add it to a page</a>
+      <a href="#what-it-doesnt-do">What it doesn't do</a>
       <a href="https://github.com/gavinwye/comments.gavinwye.com">GitHub</a>
     </nav>
   </div>
@@ -77,38 +81,42 @@
     <p class="small">On this page, comments are saved in your browser only. On your own site they're shared.</p>
   </div>
 
-  <section>
+  <section id="why-it-exists">
     <h2>Why it exists</h2>
     <p>Reviewing a prototype by email gets you vague notes: "the second paragraph feels off". It's slow to work out which paragraph, and what was meant.</p>
     <p>With this, the reviewer selects the words they mean and writes what's wrong. You get the words and the comment together, in one list, without anyone needing an account.</p>
     <p>It started as a way to get quick reactions to early prototypes, from people who had no time for a tool.</p>
+    <p class="top"><a href="#top">Back to top</a></p>
   </section>
 
-  <section>
+  <section id="how-it-works">
     <h2>How it works</h2>
     <ol class="steps">
       <li><b>Select.</b> A reviewer highlights text and writes a comment.</li>
       <li><b>Discuss.</b> A side panel lists every thread. People reply, and resolve what's done.</li>
       <li><b>Fix.</b> Open comments are plain JSON. You, a script or an AI assistant can read them, change the page, and mark them resolved.</li>
     </ol>
+    <p class="top"><a href="#top">Back to top</a></p>
   </section>
 
-  <section>
+  <section id="pin-a-comment-to-an-image">
     <h2>Pin a comment to an image</h2>
     <p>Some things you can't select. Open the panel, choose <b>Pin on image</b>, then click the spot you mean. The pin stays at that point, even when the image is resized.</p>
     <p><img src="demo-form.svg" alt="Wireframe of a parking permit application form" width="640" height="400" style="max-width:100%;height:auto;border:2px solid var(--ink);display:block"></p>
     <p class="small">Try it on the wireframe above. Pins are saved in your browser only.</p>
+    <p class="top"><a href="#top">Back to top</a></p>
   </section>
 
-  <section id="install">
+  <section id="add-it-to-a-page">
     <h2>Add it to a page</h2>
     <p>One line before <code>&lt;/body&gt;</code>:</p>
     <pre><code>&lt;script src="/comments.js" defer&gt;&lt;/script&gt;</code></pre>
     <p>Comments are stored by a small serverless function in the same repo. Deploy it to Netlify, set an admin token, and you're done. There's no database and nothing to build.</p>
     <p><a href="https://github.com/gavinwye/comments.gavinwye.com#readme">Setup, options and the API are in the README.</a></p>
+    <p class="top"><a href="#top">Back to top</a></p>
   </section>
 
-  <section>
+  <section id="what-you-get">
     <h2>What you get</h2>
     <div class="cols">
       <div><h3>Anchored to text</h3><p>Comments find their words again when the page loads, and survive small edits.</p></div>
@@ -116,20 +124,22 @@
       <div><h3>No accounts</h3><p>People type a name. You decide who can load the page.</p></div>
       <div><h3>One file, no dependencies</h3><p>The widget injects its own styles. It works with any site, any framework.</p></div>
     </div>
+    <p class="top"><a href="#top">Back to top</a></p>
   </section>
 
-  <section id="limits">
+  <section id="what-it-doesnt-do">
     <h2>What it doesn't do</h2>
     <ul class="plain">
       <li><b>No sign-in.</b> Anyone who can load the page can comment. Put review copies behind a password or a preview URL.</li>
       <li><b>No notifications.</b> Nobody is emailed. You look at the panel or read the API.</li>
       <li><b>Not for busy pages.</b> It's built for a handful of reviewers, not a public comment section.</li>
     </ul>
+    <p class="top"><a href="#top">Back to top</a></p>
   </section>
 </main>
 
 <footer>
-  <div class="wrap">Made by <a href="https://gavinwye.com">Gavin Wye</a>. MIT licensed. <a href="https://github.com/gavinwye/comments.gavinwye.com">Source on GitHub</a>.</div>
+  <div class="wrap"><a href="#top">Back to top</a><br><br>Made by <a href="https://gavinwye.com">Gavin Wye</a>. MIT licensed. <a href="https://github.com/gavinwye/comments.gavinwye.com">Source on GitHub</a>.</div>
 </footer>
 
 <script>window.COMMENTS_CONFIG = { apiBase: null, pageId: "demo", root: "main" };</script>
