@@ -99,6 +99,15 @@ The only dependency is `@netlify/blobs`.
 | `COMMENTS_ADMIN_TOKEN` | unset | Needed to delete. If unset, all deletes are refused. |
 | `COMMENTS_ALLOWED_ORIGINS` | unset (any) | Comma-separated origins allowed to call the API from a browser. Set this to your site. |
 
+## Where your comments live
+
+In your own Netlify account. The function keeps every thread in one [Netlify Blobs](https://docs.netlify.com/blobs/overview/) store (named `comments`, or whatever `COMMENTS_STORE` says), under the key `threads`. Nobody else holds a copy: there is no central Notis service, and the Notis site never sees your comments.
+
+- **One store for the whole site.** Production and deploy previews share it. A comment left on a preview also shows on any page with the same `pageId` in production. Use a different `COMMENTS_STORE` per site, and give previews their own `pageId` if you don't want that.
+- **Export or back up:** `netlify blobs:get comments threads > comments-backup.json`
+- **Read them while running locally:** `netlify dev` uses a local sandbox, so comments left there don't reach your live site.
+- **The demo is different.** With `apiBase: null` (as on the Notis site), comments stay in each visitor's browser and are never sent anywhere.
+
 ## The API
 
 | Request | Body | Returns |

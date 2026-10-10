@@ -71,6 +71,10 @@ Never print, log or commit the token. If you can't set it yourself, tell the use
 
 Preview deploys need the function too, so check it's included in the build, not only production.
 
+## Where the comments end up
+
+With shared storage on Netlify, they are kept in the user's own Netlify Blobs store (`COMMENTS_STORE`, default `comments`, key `threads`). Production and deploy previews share the store, so use a different `COMMENTS_STORE` for each site. Tell the user this when you report back, and that `netlify blobs:get comments threads` exports them.
+
 ## 6. Check it works
 
 1. Open the page, select a sentence, click Comment, add a name and a comment.
