@@ -134,14 +134,8 @@
 
   /* ---------- helpers ---------- */
   var uid = function () { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); };
-  function authorName() {
-    var n = localStorage.getItem("comments:author");
-    if (!n) {
-      n = (window.prompt("Your name (so the team knows who left the comment):") || "").trim();
-      if (n) localStorage.setItem("comments:author", n);
-    }
-    return n || "Anonymous";
-  }
+  function savedName() { try { return (localStorage.getItem("comments:author") || "").trim(); } catch (e) { return ""; } }
+  function saveName(n) { try { localStorage.setItem("comments:author", n); } catch (e) { /* storage blocked */ } }
   function when(ts) {
     var d = new Date(ts), now = Date.now(), s = (now - ts) / 1000;
     if (s < 60) return "just now";
@@ -267,7 +261,7 @@
       '.cmt-msg{margin:6px 0}.cmt-meta{font-size:12px;color:#505a5f}.cmt-body{font-size:15px;margin:2px 0;white-space:pre-wrap;word-wrap:break-word}' +
       '.cmt-actions{display:flex;gap:10px;margin-top:6px}' +
       '.cmt-actions button{background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline #ffc726 2px;text-underline-offset:3px}' +
-      '.cmt-reply{display:flex;gap:6px;margin-top:8px}.cmt-reply textarea{flex:1;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
+      '.cmt-reply{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmt-reply input{flex:1 1 100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;outline:0}.cmt-reply input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-reply input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-reply textarea{flex:1;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
       '.cmt-btn{background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer}.cmt-btn:hover{background:#ffd94d}' +
       '.cmt-selbtn{position:absolute;z-index:9002;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}' +
       '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:2px solid #0b0c0c;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
@@ -347,10 +341,22 @@
     ta.addEventListener('click', function (e) { e.stopPropagation(); });
     send.addEventListener('click', function (e) {
       e.stopPropagation();
-      var v = ta.value.trim(); if (!v) return;
-      store.reply(id, { id: uid(), author: authorName(), text: v, createdAt: Date.now() }).then(refresh);
+      var v = ta.value.trim();
+      var who = nameIn ? nameIn.value.trim() : savedName();
+      if (!who) { nameIn.focus(); nameIn.classList.add('cmt-invalid'); return; }
+      if (!v) { ta.focus(); return; }
+      saveName(who);
+      store.reply(id, { id: uid(), author: who, text: v, createdAt: Date.now() }).then(refresh);
     });
-    wrap.appendChild(ta); wrap.appendChild(send); box.appendChild(wrap); ta.focus();
+    // Anyone who has not given a name yet is asked for it first, above the reply.
+    var nameIn = null;
+    if (!savedName()) {
+      nameIn = el('input'); nameIn.type = 'text'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
+      nameIn.setAttribute('aria-label', 'Your name'); nameIn.placeholder = 'Your name';
+      nameIn.addEventListener('click', function (e) { e.stopPropagation(); });
+      wrap.appendChild(nameIn);
+    }
+    wrap.appendChild(ta); wrap.appendChild(send); box.appendChild(wrap); (nameIn || ta).focus();
   }
   function markActive(id) {
     listEl.querySelectorAll('.cmt-thread.cmt-active').forEach(function (b) { b.classList.remove('cmt-active'); });
@@ -414,7 +420,7 @@
     composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
     composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
     var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
-    try { nameIn.value = localStorage.getItem('comments:author') || ''; } catch (e) { /* storage blocked */ }
+    nameIn.value = savedName();
     var nameLab = el('label', 'cmt-label', 'Your name'); nameLab.setAttribute('for', 'cmt-name');
     var ta = el('textarea'); ta.id = 'cmt-new';
     var lab = el('label', 'cmt-label', 'Your comment'); lab.setAttribute('for', 'cmt-new');
@@ -426,7 +432,7 @@
       var who = nameIn.value.trim();
       if (!who) { nameIn.focus(); nameIn.classList.add('cmt-invalid'); return; }
       if (!v) { ta.focus(); return; }
-      try { localStorage.setItem('comments:author', who); } catch (e) { /* storage blocked */ }
+      saveName(who);
       var thread = {
         id: uid(), pageId: COMMENTS_CONFIG.pageId, quote: saved.quote,
         prefix: saved.prefix, suffix: saved.suffix, author: who,
