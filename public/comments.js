@@ -271,7 +271,7 @@
       '.cmt-btn{background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer}.cmt-btn:hover{background:#ffd94d}' +
       '.cmt-selbtn{position:absolute;z-index:9002;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}' +
       '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:2px solid #0b0c0c;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
-      '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;resize:vertical;min-height:72px;box-sizing:border-box;outline:0}.cmt-composer textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer .cmt-label{display:block;font-size:14px;font-weight:700;color:#0b0c0c;margin:0 0 6px}' +
+      '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;resize:vertical;min-height:72px;box-sizing:border-box;outline:0}.cmt-composer textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;margin:0 0 10px;box-sizing:border-box;outline:0}.cmt-composer input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-composer .cmt-label{display:block;font-size:14px;font-weight:700;color:#0b0c0c;margin:0 0 6px}' +
       '.cmt-composer .cmt-row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}' +
       '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer}';
     document.head.appendChild(css);
@@ -413,16 +413,23 @@
     composer = el('div', 'cmt-composer');
     composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
     composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
+    var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
+    try { nameIn.value = localStorage.getItem('comments:author') || ''; } catch (e) { /* storage blocked */ }
+    var nameLab = el('label', 'cmt-label', 'Your name'); nameLab.setAttribute('for', 'cmt-name');
     var ta = el('textarea'); ta.id = 'cmt-new';
     var lab = el('label', 'cmt-label', 'Your comment'); lab.setAttribute('for', 'cmt-new');
     var row = el('div', 'cmt-row');
     var cancel = el('button', 'cmt-cancel', 'Cancel'); cancel.addEventListener('click', removeComposer);
     var post = el('button', 'cmt-btn', 'Comment');
     post.addEventListener('click', function () {
-      var v = ta.value.trim(); if (!v) return;
+      var v = ta.value.trim();
+      var who = nameIn.value.trim();
+      if (!who) { nameIn.focus(); nameIn.classList.add('cmt-invalid'); return; }
+      if (!v) { ta.focus(); return; }
+      try { localStorage.setItem('comments:author', who); } catch (e) { /* storage blocked */ }
       var thread = {
         id: uid(), pageId: COMMENTS_CONFIG.pageId, quote: saved.quote,
-        prefix: saved.prefix, suffix: saved.suffix, author: authorName(),
+        prefix: saved.prefix, suffix: saved.suffix, author: who,
         text: v, createdAt: Date.now(), resolved: false, replies: []
       };
       store.create(thread).then(function (created) {
@@ -431,8 +438,8 @@
       });
     });
     row.appendChild(cancel); row.appendChild(post);
-    composer.appendChild(lab); composer.appendChild(ta); composer.appendChild(row);
-    document.body.appendChild(composer); ta.focus();
+    composer.appendChild(nameLab); composer.appendChild(nameIn); composer.appendChild(lab); composer.appendChild(ta); composer.appendChild(row);
+    document.body.appendChild(composer); (nameIn.value ? ta : nameIn).focus();
   }
   document.addEventListener('mousedown', function (e) {
     if (composer && !composer.contains(e.target)) removeComposer();
