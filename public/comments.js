@@ -176,8 +176,24 @@
       if (p >= 0) idx = p + thread.prefix.length;
     }
     if (idx < 0) idx = ix.full.indexOf(thread.quote);
-    if (idx < 0) return null;
-    return { start: idx, end: idx + thread.quote.length };
+    if (idx >= 0) return { start: idx, end: idx + thread.quote.length };
+    return locateLoose(ix, thread.quote);
+  }
+  // A selection that crosses paragraphs or list items carries line breaks the
+  // page's text does not, so compare with all whitespace left out and map the
+  // match back to real positions.
+  function locateLoose(ix, quote) {
+    var want = String(quote).replace(/\s+/g, "");
+    if (want.length < 2) return null;
+    var flat = "", at = [], i, ch;
+    for (i = 0; i < ix.full.length; i++) {
+      ch = ix.full.charAt(i);
+      if (/\s/.test(ch)) continue;
+      flat += ch; at.push(i);
+    }
+    var f = flat.indexOf(want);
+    if (f < 0) return null;
+    return { start: at[f], end: at[f + want.length - 1] + 1 };
   }
   function highlightRange(ix, thread, start, end) {
     ix.map.forEach(function (seg) {
