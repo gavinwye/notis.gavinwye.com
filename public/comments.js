@@ -251,7 +251,8 @@
     var css = document.createElement("style");
     css.textContent =
       '[data-cmt]{box-sizing:border-box;font-family:"Figtree",arial,sans-serif;line-height:1.45;font-style:normal;letter-spacing:normal}' +
-      'mark.cmt-hl{font:inherit;color:inherit;background:#fff3c4;border-bottom:2px solid #ffc726;cursor:pointer;padding:0 1px}' +
+      '.cmt-panel,.cmt-composer{color:#0b0c0c;color-scheme:light}.cmt-panel .cmt-body{color:#0b0c0c}.cmt-panel label{color:#505a5f}' +
+      'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #ffc726;cursor:pointer;padding:0 1px}' +
       'mark.cmt-hl[data-resolved]{background:#eef0f2;border-bottom-color:#b1b4b6}' +
       'mark.cmt-hl.cmt-flash{animation:cmtFlash 1.2s ease}' +
       '@keyframes cmtFlash{0%,100%{background:#fff3c4}50%{background:#ffd94d}}' +
