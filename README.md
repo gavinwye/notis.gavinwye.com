@@ -1,10 +1,10 @@
-# Comments
+# Notis
 
-Select text on any page and leave a comment on it. A side panel lists every thread, with replies and resolve. Comments are shared with everyone who opens the page.
+Notis is Swedish for a short note. Select text on any page and leave a comment on it. A side panel lists every thread, with replies and resolve. Comments are shared with everyone who opens the page.
 
 It's one script on the page and one small serverless function behind it. No accounts, no database to set up, no build step.
 
-**Site:** https://comments.gavinwye.com
+**Site:** https://notis.gavinwye.com
 
 ## Why it exists
 
@@ -24,13 +24,23 @@ It was built to get fast reactions to early prototypes.
 ## Try it
 
 ```bash
-git clone https://github.com/gavinwye/comments.gavinwye.com
-cd comments.gavinwye.com
+git clone https://github.com/gavinwye/notis.gavinwye.com
+cd notis.gavinwye.com
 npm install
 npx netlify dev        # http://localhost:8888
 ```
 
 Open the page, select some text, and comment. You need the [Netlify CLI](https://docs.netlify.com/cli/get-started/) and `netlify login`.
+
+## Ask an agent to add it
+
+Paste this into a coding agent (Claude Code, Codex, Cursor) working in your site's folder:
+
+```
+Add Notis to this site. Follow the instructions at https://notis.gavinwye.com/install.md
+```
+
+[`site/install.md`](site/install.md) is written for the agent. It asks where Notis should run, copies the script, adds one line to your layout, sets up storage if you want it shared, and checks it works. It asks before it adds a function or touches production. There's also an [`llms.txt`](https://notis.gavinwye.com/llms.txt).
 
 ## Add it to a page
 
@@ -157,7 +167,7 @@ Worth knowing before you rely on it.
 ```
 public/comments.js            the widget
 netlify/functions/comments.mjs  the API
-site/                         the website (comments.gavinwye.com)
+site/                         the website (notis.gavinwye.com)
 docs/PLAN.md                  how we're publishing it
 ```
 

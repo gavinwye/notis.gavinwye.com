@@ -1,8 +1,8 @@
 I build a lot of small prototypes and pages, and I need people to tell me what's wrong with them. Email doesn't work well for that. "The second paragraph feels off" means I have to work out which paragraph, then what was meant.
 
-So I made a small tool. A reviewer selects the words they mean and leaves a comment on them. The comment stays attached to those words, and everyone who opens the page sees the same list.
+So I made a small tool called Notis, which is Swedish for a short note. A reviewer selects the words they mean and leaves a comment on them. The comment stays attached to those words, and everyone who opens the page sees the same list.
 
-It's open source and live at [comments.gavinwye.com](https://comments.gavinwye.com), where you can try it.
+It's open source and live at [notis.gavinwye.com](https://notis.gavinwye.com), where you can try it. You can also ask an agent to add it to your site: the site has a one-line prompt for that.
 
 ## What it does
 
@@ -35,5 +35,5 @@ That turns review into a short loop. I read the page, leave comments, and come b
 
 It's MIT licensed. The setup is in the README, and you can add it to a page with one line.
 
-- Site: https://comments.gavinwye.com
-- Source: https://github.com/gavinwye/comments.gavinwye.com
+- Site: https://notis.gavinwye.com
+- Source: https://github.com/gavinwye/notis.gavinwye.com

@@ -1,6 +1,6 @@
 # Intro video script
 
-Length: about 75 seconds. Screen recording of comments.gavinwye.com with a voiceover. No face to camera needed.
+Length: about 80 seconds. Screen recording of notis.gavinwye.com with a voiceover. No face to camera needed.
 Words are spoken; lines in [brackets] are what's on screen.
 
 ---
@@ -35,11 +35,11 @@ Words are spoken; lines in [brackets] are what's on screen.
 
 "Comments are plain data, so you, a script, or an AI assistant can work through them and mark them done."
 
-**6. Get it (1:08 – 1:15)**
+**6. Get it (1:08 – 1:20)**
 
-[Code block: one script tag. Then the URL comments.gavinwye.com and the GitHub repo.]
+[Code block: one script tag. Then the "Add it with an agent" prompt on the site. Then the name Notis, the URL notis.gavinwye.com and the GitHub repo.]
 
-"One line to add it to a page. Open source, free to use. It's at comments.gavinwye.com."
+"One line to add it to a page, or ask your AI assistant to do it. It's called Notis, it's open source, and it's at notis.gavinwye.com."
 
 ---
 
