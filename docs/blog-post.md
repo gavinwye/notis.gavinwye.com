@@ -1,13 +1,16 @@
 I build a lot of small prototypes and pages, and I need people to tell me what's wrong with them. Email doesn't work well for that. "The second paragraph feels off" means I have to work out which paragraph, then what was meant.
 
-So I made a small widget. A reviewer selects the words they mean and leaves a comment on them. The comment stays attached to those words, and everyone who opens the page sees the same list.
+So I made a small tool. A reviewer selects the words they mean and leaves a comment on them. The comment stays attached to those words, and everyone who opens the page sees the same list.
+
+It's open source and live at [comments.gavinwye.com](https://comments.gavinwye.com), where you can try it.
 
 ## What it does
 
 - Select any text and write a comment.
-- A side panel lists every thread, with replies and resolve.
-- Comments find their words again when the page loads, and survive small edits to the page.
-- Nobody needs an account. People type a name.
+- Drop a pin on an image to comment on a particular spot.
+- A side panel lists every comment in the order it appears on the page, with replies and resolve.
+- Clicking a comment in the panel scrolls the page to the words it's about.
+- Nobody needs an account. People type a name once and it's remembered.
 
 It's one script on the page and one small function behind it. There's no database to set up.
 
@@ -26,10 +29,11 @@ That turns review into a short loop. I read the page, leave comments, and come b
 - There's no sign-in. Anyone who can load the page can comment, so put review copies behind a password or a preview URL.
 - It doesn't notify anyone. You look at the panel.
 - It's for a handful of reviewers. It isn't a comment section for a busy public page.
+- Pins work on image tags. They don't work on CSS backgrounds or inline SVG.
 
 ## Try it
 
-It's open source and MIT licensed. You can try it on the site, and the setup is in the README.
+It's MIT licensed. The setup is in the README, and you can add it to a page with one line.
 
 - Site: https://comments.gavinwye.com
 - Source: https://github.com/gavinwye/comments.gavinwye.com
