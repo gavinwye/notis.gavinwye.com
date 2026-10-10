@@ -13,6 +13,12 @@ Issues for each step are in the repo. Estimates are raw; no calibration is trust
 | Blog post | drafted in the publisher desk (draft `imv2oih9lf5`, "Reviewing a page by commenting on the exact words"; copy in `docs/blog-post.md`), then a PR on `gavinwye/gavinwye.com` |
 | Local folder | `~/com.gavinwye.comments` |
 
+## Deploys
+
+- `main` deploys to production. Every PR gets a deploy preview, and Netlify posts the link as a PR comment, a check and a commit status.
+- The Netlify site has no function. The demo on the site keeps comments in the browser only.
+- A change to `public/comments.js` rebuilds the site as well as a change under `site/`.
+
 ## Which version this is
 
 The newest copy in use, with the other sites' project-specific settings left out:
