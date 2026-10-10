@@ -15,27 +15,23 @@ Issues for each step are in the repo. Estimates are raw; no calibration is trust
 
 ## Which version this is
 
-Pulled from four copies on this machine:
+The newest copy in use, with the other sites' project-specific settings left out:
 
-- Widget: the story map's copy (`dock`, events, "text has changed" notice, click fixes) plus the style-isolation fix from gavinwye.com (the widget inherited the host page's line-height and italics).
-- Server: the hardened standalone version from `~/comment-widget` (server owns ids, field caps, admin token, CORS allowlist), plus the `204` fix from the story map.
-- Left out: gavinwye.com's "only on deploy previews" gate and the story map's `SITE_NAME` preview allowlist. Both are specific to those sites.
+- Widget: dock mode, events, a "text has changed" notice, and styles that don't inherit the host page's line-height and italics.
+- Server: the hardened standalone version (server owns ids, field caps, admin token, CORS allowlist).
+- Prefix: events are `comments:*`, classes `cmt-*`, attributes `data-cmt`.
 
 ## Decisions for Gavin before it goes public
 
-1. **Licence holder.** The old `LICENSE` says "Copyright (c) 2026 GovTech Barbados". It's unchanged here. Decide whether it stays, or becomes Gavin Wye.
-2. **Name.** "Comments" is a working name and it's what the domain says. Fine, or something more findable?
-3. **The `gtc` prefix.** Events (`gtc:select`), CSS classes and localStorage keys still say `gtc` (GovTech Comments). Renaming now is cheap, but the story map listens for `gtc:*`, so it has to move with it.
-4. **Font.** The panel uses Figtree. Fine as a default, but should be a setting.
-
-Date for the post is left blank (defaults to the day it is sent). For the Tuesday slot, set it to 2026-10-13 or later.
+1. **Name.** "Comments" is a working name and it's what the domain says. Fine, or something more findable?
+2. **Font.** The panel uses Figtree. Fine as a default, but should be a setting.
 
 ## Steps
 
 | # | Step | Raw estimate | Needs Gavin |
 |---|---|---|---|
-| 1 | Decide licence holder and name | 15m | yes |
-| 2 | Rename `gtc` to the final prefix, in the widget and the story map | 1h | |
+| 1 | ~~Decide licence holder and name~~ licence done (Gavin Wye); name open | 15m | yes |
+| 2 | ~~Rename the old project prefix~~ done | 1h | |
 | 3 | Make font and accent colour settings | 1h | |
 | 4 | Tests: function (a version exists, needs a Blobs stub) and widget (select, comment, reload) | 2h | |
 | 5 | Deploy the website to Netlify preview, then DNS for `comments.gavinwye.com` | 30m | yes (prod + DNS) |

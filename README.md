@@ -10,7 +10,7 @@ It's one script on the page and one small serverless function behind it. No acco
 
 Reviewing a prototype by email means vague notes: "the second paragraph feels off". Here the reviewer selects the words they mean and says what's wrong with them. The comment stays attached to those words, and you can see all of them in one place.
 
-It was built to get fast reactions to early government service prototypes. Nothing in it is specific to government.
+It was built to get fast reactions to early prototypes.
 
 ## What you get
 
@@ -67,9 +67,9 @@ The widget fires events on `document`, so a page can react to a comment, for exa
 
 | Event | `detail` | When |
 |---|---|---|
-| `gtc:select` | `{ el }` | text was selected inside the root |
-| `gtc:focus` | `{ el }` | a thread's highlight was focused |
-| `gtc:close` | | the panel was closed |
+| `comments:select` | `{ el }` | text was selected inside the root |
+| `comments:focus` | `{ el }` | a thread's highlight was focused |
+| `comments:close` | | the panel was closed |
 
 ## Run your own server
 
