@@ -26,6 +26,7 @@
      root      CSS selector for the commentable region  (default "body")
      dock      true to dock the panel beside the page, pushing content
                over instead of covering it              (default false)
+     pins      true to let reviewers drop a pin on an image   (default true)
      supabase  { url, anonKey } to use Supabase instead of the API
                (leave null to use apiBase; set apiBase null to fall back
                to browser-only localStorage)
@@ -61,12 +62,14 @@
     apiBase: "/api",
     pageId: defaultPath,
     root: "body",
-    dock: false
+    dock: false,
+    pins: true
   }, window.COMMENTS_CONFIG || {});
 
   if (dataAttr("data-api-base") != null) COMMENTS_CONFIG.apiBase = dataAttr("data-api-base");
   if (dataAttr("data-page-id") != null) COMMENTS_CONFIG.pageId = dataAttr("data-page-id");
   if (dataAttr("data-root") != null) COMMENTS_CONFIG.root = dataAttr("data-root");
+  if (dataAttr("data-pins") != null) COMMENTS_CONFIG.pins = dataAttr("data-pins") !== "false";
   if (dataAttr("data-dock") != null) COMMENTS_CONFIG.dock = dataAttr("data-dock") !== "false";
 
   /* ---------- storage adapters (async, Promise-based) ---------- */
@@ -134,14 +137,8 @@
 
   /* ---------- helpers ---------- */
   var uid = function () { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); };
-  function authorName() {
-    var n = localStorage.getItem("comments:author");
-    if (!n) {
-      n = (window.prompt("Your name (so the team knows who left the comment):") || "").trim();
-      if (n) localStorage.setItem("comments:author", n);
-    }
-    return n || "Anonymous";
-  }
+  function savedName() { try { return (localStorage.getItem("comments:author") || "").trim(); } catch (e) { return ""; } }
+  function saveName(n) { try { localStorage.setItem("comments:author", n); } catch (e) { /* storage blocked */ } }
   function when(ts) {
     var d = new Date(ts), now = Date.now(), s = (now - ts) / 1000;
     if (s < 60) return "just now";
@@ -182,8 +179,24 @@
       if (p >= 0) idx = p + thread.prefix.length;
     }
     if (idx < 0) idx = ix.full.indexOf(thread.quote);
-    if (idx < 0) return null;
-    return { start: idx, end: idx + thread.quote.length };
+    if (idx >= 0) return { start: idx, end: idx + thread.quote.length };
+    return locateLoose(ix, thread.quote);
+  }
+  // A selection that crosses paragraphs or list items carries line breaks the
+  // page's text does not, so compare with all whitespace left out and map the
+  // match back to real positions.
+  function locateLoose(ix, quote) {
+    var want = String(quote).replace(/\s+/g, "");
+    if (want.length < 2) return null;
+    var flat = "", at = [], i, ch;
+    for (i = 0; i < ix.full.length; i++) {
+      ch = ix.full.charAt(i);
+      if (/\s/.test(ch)) continue;
+      flat += ch; at.push(i);
+    }
+    var f = flat.indexOf(want);
+    if (f < 0) return null;
+    return { start: at[f], end: at[f + want.length - 1] + 1 };
   }
   function highlightRange(ix, thread, start, end) {
     ix.map.forEach(function (seg) {
@@ -207,6 +220,7 @@
     var located = [];
     found = {};
     threads.forEach(function (t) {
+      if (t.pin) return; // pinned to an image; renderPins() places these
       var loc = locate(ix, t);
       if (loc) found[t.id] = true;
       if (t.resolved && !showResolved) return;
@@ -221,6 +235,93 @@
     });
   }
 
+
+  /* ---------- pins on images ---------- */
+  function rootImages() {
+    return Array.prototype.filter.call(rootEl().querySelectorAll("img"), function (im) { return !im.closest("[data-cmt]"); });
+  }
+  function findImage(pin) {
+    var imgs = rootImages(), same = imgs.filter(function (im) { return im.getAttribute("src") === pin.src; });
+    if (imgs[pin.i] && imgs[pin.i].getAttribute("src") === pin.src) return imgs[pin.i];
+    return same[0] || null;
+  }
+  function imageLabel(pin) {
+    if (pin.alt) return pin.alt;
+    var name = String(pin.src || "").split("?")[0].split("/").pop();
+    return name || "image";
+  }
+  // Threads in the order they appear on the page: text by its highlight, pins
+  // by their image (then top to bottom, left to right). Anything that can no
+  // longer be placed goes last, oldest first.
+  function anchorNode(t) {
+    if (t.pin) return findImage(t.pin);
+    return document.querySelector('mark.cmt-hl[data-thread="' + cssId(t.id) + '"]');
+  }
+  function byPosition(list) {
+    var rows = list.map(function (t) { return { t: t, n: anchorNode(t) }; });
+    rows.sort(function (a, b) {
+      if (!a.n || !b.n) {
+        if (a.n !== b.n) return a.n ? -1 : 1;
+        return (a.t.createdAt || 0) - (b.t.createdAt || 0);
+      }
+      if (a.n === b.n) {
+        var pa = a.t.pin || { x: 0, y: 0 }, pb = b.t.pin || { x: 0, y: 0 };
+        return (pa.y - pb.y) || (pa.x - pb.x) || ((a.t.createdAt || 0) - (b.t.createdAt || 0));
+      }
+      return a.n.compareDocumentPosition(b.n) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+    return rows.map(function (r) { return r.t; });
+  }
+  var pinEls = [];
+  function renderPins() {
+    pinEls.forEach(function (e) { e.remove(); }); pinEls = [];
+    var pinned = byPosition(threads.filter(function (t) { return t.pin; }));
+    pinned.forEach(function (t, n) {
+      var img = findImage(t.pin);
+      found[t.id] = !!img;
+      t.pinNumber = n + 1;
+      if (!img || (t.resolved && !showResolved)) return;
+      var r = img.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      var b = el("button", "cmt-pin", String(n + 1));
+      b.dataset.thread = t.id; if (t.resolved) b.setAttribute("data-resolved", "1");
+      b.setAttribute("aria-label", "Comment " + (n + 1) + " on " + imageLabel(t.pin));
+      b.style.left = (window.scrollX + r.left + t.pin.x * r.width) + "px";
+      b.style.top = (window.scrollY + r.top + t.pin.y * r.height) + "px";
+      b.addEventListener("click", function (e) { e.stopPropagation(); openPanel(); focusThread(t.id); });
+      document.body.appendChild(b); pinEls.push(b);
+    });
+  }
+  var pinMode = false, pinHint = null, pinBtn = null;
+  function setPinMode(on) {
+    pinMode = !!on;
+    document.documentElement.classList.toggle("cmt-pinning", pinMode);
+    if (pinBtn) { pinBtn.setAttribute("aria-pressed", pinMode ? "true" : "false"); pinBtn.classList.toggle("cmt-on", pinMode); }
+    if (pinHint) { pinHint.remove(); pinHint = null; }
+    if (pinMode) {
+      removeSelBtn(); removeComposer();
+      pinHint = el("div", "cmt-pinhint", rootImages().length
+        ? "Click an image to drop a pin. Press Esc to cancel."
+        : "There are no images on this page to pin to.");
+      document.body.appendChild(pinHint);
+    }
+  }
+  document.addEventListener("click", function (e) {
+    if (!pinMode) return;
+    var img = e.target && e.target.closest ? e.target.closest("img") : null;
+    if (!img || img.closest("[data-cmt]") || !rootEl().contains(img)) return;
+    e.preventDefault(); e.stopPropagation();
+    var r = img.getBoundingClientRect();
+    var x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    var y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    var pin = { src: img.getAttribute("src") || "", i: rootImages().indexOf(img), alt: img.getAttribute("alt") || "", x: x, y: y };
+    setPinMode(false);
+    openComposer({ quote: "", prefix: "", suffix: "", pin: pin }, { bottom: e.clientY, left: e.clientX });
+  }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && pinMode) setPinMode(false); });
+  window.addEventListener("resize", function () { renderPins(); });
+  window.addEventListener("load", function () { renderPins(); });
+
   /* ---------- state ---------- */
   var threads = [], showResolved = false, found = {};
 
@@ -229,6 +330,7 @@
       threads = list || [];
       clearHighlights();
       applyHighlights();
+      renderPins();
       renderPanel();
       updateCount();
     });
@@ -241,13 +343,14 @@
     var css = document.createElement("style");
     css.textContent =
       '[data-cmt]{box-sizing:border-box;font-family:"Figtree",arial,sans-serif;line-height:1.45;font-style:normal;letter-spacing:normal}' +
-      'mark.cmt-hl{font:inherit;color:inherit;background:#fff3c4;border-bottom:2px solid #ffc726;cursor:pointer;padding:0 1px}' +
+      '.cmt-panel,.cmt-composer{color:#0b0c0c;color-scheme:light}.cmt-panel .cmt-body{color:#0b0c0c}.cmt-panel label{color:#505a5f}' +
+      'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #ffc726;cursor:pointer;padding:0 1px}' +
       'mark.cmt-hl[data-resolved]{background:#eef0f2;border-bottom-color:#b1b4b6}' +
       'mark.cmt-hl.cmt-flash{animation:cmtFlash 1.2s ease}' +
       '@keyframes cmtFlash{0%,100%{background:#fff3c4}50%{background:#ffd94d}}' +
-      '.cmt-toggle{position:fixed;right:16px;bottom:16px;z-index:9000;background:#0e5f64;color:#fff;border:0;border-radius:24px;padding:10px 16px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}' +
-      '.cmt-toggle:hover{background:#0a4549}.cmt-toggle:focus-visible{outline:3px solid #ffc726;outline-offset:2px}' +
-      '.cmt-panel{position:fixed;top:0;right:0;height:100vh;width:360px;max-width:92vw;background:#fff;border-left:1px solid #b1b4b6;box-shadow:-2px 0 12px rgba(0,0,0,.15);z-index:9001;transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column}' +
+      '.cmt-toggle{position:fixed;right:16px;bottom:16px;z-index:9000;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:10px 16px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}' +
+      '.cmt-toggle:hover{background:#ffd94d}.cmt-toggle:focus-visible,.cmt-btn:focus-visible,.cmt-selbtn:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}' +
+      '.cmt-panel{position:fixed;top:0;right:0;height:100vh;width:360px;max-width:92vw;background:#fff;border-left:2px solid #0b0c0c;box-shadow:-2px 0 12px rgba(0,0,0,.15);z-index:9001;transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column}' +
       '.cmt-panel.cmt-open{transform:none}' +
       // Docked: the page makes room for the panel instead of sitting under it.
       'html.cmt-docked body{margin-right:360px}' +
@@ -255,8 +358,8 @@
       'html.cmt-docked .cmt-toggle{display:none}' +
       '@media (max-width:760px){html.cmt-docked body{margin-right:0}html.cmt-docked .cmt-panel{box-shadow:-2px 0 12px rgba(0,0,0,.15)}}' +
       '@media (prefers-reduced-motion:no-preference){body{transition:margin-right .2s}}' +
-      '.cmt-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid #b1b4b6;background:#00267f;color:#fff}' +
-      '.cmt-head h2{margin:0;font-size:18px;flex:1}.cmt-head button{background:none;border:0;color:#fff;font-size:20px;cursor:pointer;line-height:1}' +
+      '.cmt-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:2px solid #0b0c0c;background:#ffc726;color:#0b0c0c}' +
+      '.cmt-head h2{margin:0;font-size:18px;flex:1}.cmt-head button{background:none;border:0;color:#0b0c0c;font-size:20px;cursor:pointer;line-height:1}' +
       '.cmt-sub{display:flex;align-items:center;gap:6px;padding:8px 16px;font-size:14px;color:#505a5f;border-bottom:1px solid #e0e4e9}' +
       '.cmt-list{flex:1;overflow:auto;padding:8px 0}' +
       '.cmt-empty{padding:24px 16px;color:#505a5f;font-size:15px}' +
@@ -266,17 +369,23 @@
       '.cmt-lost{font-size:12px;color:#8a4b00;margin:-2px 0 6px}' +
       '.cmt-msg{margin:6px 0}.cmt-meta{font-size:12px;color:#505a5f}.cmt-body{font-size:15px;margin:2px 0;white-space:pre-wrap;word-wrap:break-word}' +
       '.cmt-actions{display:flex;gap:10px;margin-top:6px}' +
-      '.cmt-actions button{background:none;border:0;color:#1d70b8;font-size:13px;font-weight:700;cursor:pointer;padding:0}' +
-      '.cmt-reply{display:flex;gap:6px;margin-top:8px}.cmt-reply textarea{flex:1;font:inherit;font-size:14px;border:1px solid #b1b4b6;border-radius:4px;padding:6px;resize:vertical;min-height:34px}' +
-      '.cmt-btn{background:#0e5f64;color:#fff;border:0;border-radius:4px;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer}.cmt-btn:hover{background:#0a4549}' +
-      '.cmt-selbtn{position:absolute;z-index:9002;background:#0e5f64;color:#fff;border:0;border-radius:18px;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}' +
-      '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:1px solid #b1b4b6;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
-      '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:1px solid #b1b4b6;border-radius:4px;padding:6px;resize:vertical;min-height:60px;box-sizing:border-box}' +
+      '.cmt-actions button{background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline #ffc726 2px;text-underline-offset:3px}' +
+      '.cmt-reply{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmt-reply input{flex:1 1 100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;outline:0}.cmt-reply input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-reply input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-reply textarea{flex:1;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
+      '.cmt-btn{background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer}.cmt-btn:hover{background:#ffd94d}' +
+      '.cmt-selbtn{position:absolute;z-index:9002;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}' +
+      '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:2px solid #0b0c0c;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
+      '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;resize:vertical;min-height:72px;box-sizing:border-box;outline:0}.cmt-composer textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;margin:0 0 10px;box-sizing:border-box;outline:0}.cmt-composer input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-composer .cmt-label{display:block;font-size:14px;font-weight:700;color:#0b0c0c;margin:0 0 6px}' +
       '.cmt-composer .cmt-row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}' +
+      '.cmt-pin{position:absolute;z-index:9002;width:28px;height:28px;margin:-14px 0 0 -14px;padding:0;border-radius:50%;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;font:700 14px/1 "Figtree",arial,sans-serif;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.35)}' +
+      '.cmt-pin:hover{background:#ffd94d}.cmt-pin:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}.cmt-pin[data-resolved]{background:#eef0f2}' +
+      '.cmt-pin.cmt-flash{animation:cmtPin 1.2s ease}@keyframes cmtPin{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}' +
+      'html.cmt-pinning img{cursor:crosshair !important;outline:3px dashed #ffc726;outline-offset:3px}' +
+      '.cmt-pinhint{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9004;background:#0b0c0c;color:#fff;padding:10px 16px;font-size:15px;font-weight:600}' +
+      '.cmt-head .cmt-pinbtn{background:#0b0c0c;color:#fff;border:0;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}.cmt-head .cmt-pinbtn.cmt-on{background:#fff;color:#0b0c0c;box-shadow:inset 0 0 0 2px #0b0c0c}' +
       '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer}';
     document.head.appendChild(css);
 
-    toggleBtn = el('button', 'cmt-toggle', '💬 Comments');
+    toggleBtn = el('button', 'cmt-toggle', 'Comments');
     toggleBtn.setAttribute('data-cmt', 'toggle');
     toggleBtn.addEventListener('click', function () { panel.classList.contains('cmt-open') ? closePanel() : openPanel(); });
     document.body.appendChild(toggleBtn);
@@ -284,7 +393,13 @@
     panel = el('aside', 'cmt-panel'); panel.setAttribute('data-cmt', 'panel'); panel.setAttribute('aria-label', 'Comments');
     var head = el('div', 'cmt-head');
     var h2 = el('h2', '', 'Comments'); var close = el('button', '', '×'); close.setAttribute('aria-label', 'Close comments');
-    close.addEventListener('click', closePanel); head.appendChild(h2); head.appendChild(close);
+    close.addEventListener('click', closePanel); head.appendChild(h2);
+    if (COMMENTS_CONFIG.pins) {
+      pinBtn = el('button', 'cmt-pinbtn', 'Pin on image'); pinBtn.setAttribute('aria-pressed', 'false');
+      pinBtn.addEventListener('click', function () { setPinMode(!pinMode); });
+      head.appendChild(pinBtn);
+    }
+    head.appendChild(close);
     var sub = el('div', 'cmt-sub');
     resolvedChk = el('input'); resolvedChk.type = 'checkbox'; resolvedChk.id = 'cmt-showres';
     resolvedChk.addEventListener('change', function () { showResolved = resolvedChk.checked; refresh(); });
@@ -310,20 +425,23 @@
   }
   function updateCount() {
     var n = threads.filter(function (t) { return !t.resolved; }).length;
-    toggleBtn.textContent = '💬 Comments' + (n ? ' (' + n + ')' : '');
+    toggleBtn.textContent = 'Comments' + (n ? ' (' + n + ')' : '');
   }
 
   function renderPanel() {
     listEl.innerHTML = '';
-    var visible = threads.filter(function (t) { return showResolved || !t.resolved; });
+    var visible = byPosition(threads.filter(function (t) { return showResolved || !t.resolved; }));
     if (!visible.length) {
-      listEl.appendChild(el('div', 'cmt-empty', 'No comments yet. Select any text on the page to start one.'));
+      listEl.appendChild(el('div', 'cmt-empty', COMMENTS_CONFIG.pins ? 'No comments yet. Select any text on the page to start one, or pin one to an image.' : 'No comments yet. Select any text on the page to start one.'));
       return;
     }
     visible.forEach(function (t) {
       var box = el('div', 'cmt-thread'); box.dataset.thread = t.id; if (t.resolved) box.setAttribute('data-resolved', '1');
-      var q = el('div', 'cmt-quote', '“' + t.quote + '”'); box.appendChild(q);
-      if (!found[t.id]) box.appendChild(el('div', 'cmt-lost', 'This text has changed since the comment was left.'));
+      var q = t.pin
+        ? el('div', 'cmt-quote', 'Pin ' + (t.pinNumber || '') + ' on ' + imageLabel(t.pin))
+        : el('div', 'cmt-quote', '“' + t.quote + '”');
+      box.appendChild(q);
+      if (!found[t.id]) box.appendChild(el('div', 'cmt-lost', t.pin ? 'This image is no longer on the page.' : 'This text has changed since the comment was left.'));
       box.appendChild(msg(t.author, t.text, t.createdAt));
       (t.replies || []).forEach(function (r) { box.appendChild(msg(r.author, r.text, r.createdAt)); });
       var actions = el('div', 'cmt-actions');
@@ -343,14 +461,26 @@
   }
   function showReply(box, id) {
     if (box.querySelector('.cmt-reply')) return;
-    var wrap = el('div', 'cmt-reply'); var ta = el('textarea'); var send = el('button', 'cmt-btn', 'Post');
+    var wrap = el('div', 'cmt-reply'); var ta = el('textarea'); var send = el('button', 'cmt-btn', 'Post'); ta.id = 'cmt-reply-' + id; ta.setAttribute('aria-label', 'Your reply');
     ta.addEventListener('click', function (e) { e.stopPropagation(); });
     send.addEventListener('click', function (e) {
       e.stopPropagation();
-      var v = ta.value.trim(); if (!v) return;
-      store.reply(id, { id: uid(), author: authorName(), text: v, createdAt: Date.now() }).then(refresh);
+      var v = ta.value.trim();
+      var who = nameIn ? nameIn.value.trim() : savedName();
+      if (!who) { nameIn.focus(); nameIn.classList.add('cmt-invalid'); return; }
+      if (!v) { ta.focus(); return; }
+      saveName(who);
+      store.reply(id, { id: uid(), author: who, text: v, createdAt: Date.now() }).then(refresh);
     });
-    wrap.appendChild(ta); wrap.appendChild(send); box.appendChild(wrap); ta.focus();
+    // Anyone who has not given a name yet is asked for it first, above the reply.
+    var nameIn = null;
+    if (!savedName()) {
+      nameIn = el('input'); nameIn.type = 'text'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
+      nameIn.setAttribute('aria-label', 'Your name'); nameIn.placeholder = 'Your name';
+      nameIn.addEventListener('click', function (e) { e.stopPropagation(); });
+      wrap.appendChild(nameIn);
+    }
+    wrap.appendChild(ta); wrap.appendChild(send); box.appendChild(wrap); (nameIn || ta).focus();
   }
   function markActive(id) {
     listEl.querySelectorAll('.cmt-thread.cmt-active').forEach(function (b) { b.classList.remove('cmt-active'); });
@@ -364,6 +494,13 @@
     flash(id);
   }
   function flash(id) {
+    var pe = document.querySelector('.cmt-pin[data-thread="' + cssId(id) + '"]');
+    if (pe) {
+      pe.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+      pe.classList.add('cmt-flash'); setTimeout(function () { pe.classList.remove('cmt-flash'); }, 1200);
+      emit('comments:focus', { el: pe });
+      return;
+    }
     var m = document.querySelector('mark.cmt-hl[data-thread="' + cssId(id) + '"]');
     if (m) {
       m.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
@@ -385,7 +522,7 @@
       if (quote.length < 2) return;
       emit('comments:select', { el: range.startContainer.parentElement });
       var rect = range.getBoundingClientRect();
-      selBtn = el('button', 'cmt-selbtn', '💬 Comment');
+      selBtn = el('button', 'cmt-selbtn', 'Comment');
       selBtn.style.top = (window.scrollY + rect.bottom + 6) + 'px';
       selBtn.style.left = (window.scrollX + rect.left) + 'px';
       var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end') };
@@ -413,15 +550,23 @@
     composer = el('div', 'cmt-composer');
     composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
     composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
-    var ta = el('textarea'); ta.placeholder = 'Add your comment…';
+    var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
+    nameIn.value = savedName();
+    var nameLab = el('label', 'cmt-label', 'Your name'); nameLab.setAttribute('for', 'cmt-name');
+    var ta = el('textarea'); ta.id = 'cmt-new';
+    var lab = el('label', 'cmt-label', 'Your comment'); lab.setAttribute('for', 'cmt-new');
     var row = el('div', 'cmt-row');
     var cancel = el('button', 'cmt-cancel', 'Cancel'); cancel.addEventListener('click', removeComposer);
     var post = el('button', 'cmt-btn', 'Comment');
     post.addEventListener('click', function () {
-      var v = ta.value.trim(); if (!v) return;
+      var v = ta.value.trim();
+      var who = nameIn.value.trim();
+      if (!who) { nameIn.focus(); nameIn.classList.add('cmt-invalid'); return; }
+      if (!v) { ta.focus(); return; }
+      saveName(who);
       var thread = {
         id: uid(), pageId: COMMENTS_CONFIG.pageId, quote: saved.quote,
-        prefix: saved.prefix, suffix: saved.suffix, author: authorName(),
+        prefix: saved.prefix, suffix: saved.suffix, pin: saved.pin || undefined, author: who,
         text: v, createdAt: Date.now(), resolved: false, replies: []
       };
       store.create(thread).then(function (created) {
@@ -430,8 +575,8 @@
       });
     });
     row.appendChild(cancel); row.appendChild(post);
-    composer.appendChild(ta); composer.appendChild(row);
-    document.body.appendChild(composer); ta.focus();
+    composer.appendChild(nameLab); composer.appendChild(nameIn); composer.appendChild(lab); composer.appendChild(ta); composer.appendChild(row);
+    document.body.appendChild(composer); (nameIn.value ? ta : nameIn).focus();
   }
   document.addEventListener('mousedown', function (e) {
     if (composer && !composer.contains(e.target)) removeComposer();

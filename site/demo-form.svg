@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img">
+  <rect width="640" height="400" fill="#f6f7f8"/>
+  <rect x="40" y="30" width="560" height="340" fill="#fff" stroke="#0b0c0c" stroke-width="2"/>
+  <text x="70" y="78" font-family="Figtree,Arial,sans-serif" font-size="26" font-weight="800" fill="#0b0c0c">Apply for a parking permit</text>
+  <text x="70" y="108" font-family="Figtree,Arial,sans-serif" font-size="15" fill="#505a5f">It takes about 5 minutes. You'll need your vehicle details.</text>
+  <text x="70" y="148" font-family="Figtree,Arial,sans-serif" font-size="15" font-weight="700" fill="#0b0c0c">Full name</text>
+  <rect x="70" y="158" width="320" height="38" fill="#fff" stroke="#0b0c0c" stroke-width="2"/>
+  <text x="70" y="228" font-family="Figtree,Arial,sans-serif" font-size="15" font-weight="700" fill="#0b0c0c">Registration number</text>
+  <rect x="70" y="238" width="200" height="38" fill="#fff" stroke="#0b0c0c" stroke-width="2"/>
+  <rect x="70" y="302" width="150" height="42" fill="#ffc726" stroke="#0b0c0c" stroke-width="2"/>
+  <text x="145" y="329" text-anchor="middle" font-family="Figtree,Arial,sans-serif" font-size="16" font-weight="700" fill="#0b0c0c">Continue</text>
+  <text x="430" y="148" font-family="Figtree,Arial,sans-serif" font-size="13" fill="#505a5f">Fees</text>
+  <text x="430" y="172" font-family="Figtree,Arial,sans-serif" font-size="13" fill="#505a5f">Standard permit  $25</text>
+  <text x="430" y="194" font-family="Figtree,Arial,sans-serif" font-size="13" fill="#505a5f">Disabled badge   free</text>
+</svg>
