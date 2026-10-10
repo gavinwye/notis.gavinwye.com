@@ -24,7 +24,7 @@
   a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--markline); text-decoration-thickness:2px; text-underline-offset:3px; }
   a:hover { background:var(--mark); }
   .wrap { max-width:720px; margin:0 auto; padding:0 20px; }
-  header { padding:20px 0; border-bottom:1px solid var(--line); }
+  header { position:sticky; top:0; z-index:100; background:var(--paper); padding:16px 0; border-bottom:1px solid var(--line); }
   header .wrap { display:flex; justify-content:space-between; align-items:center; gap:16px; }
   .brand { font-weight:800; font-size:20px; text-decoration:none; color:var(--ink); display:flex; align-items:center; gap:10px; }
   .brand i { width:24px; height:24px; background:var(--markline); display:inline-block; }
@@ -54,15 +54,13 @@
   .cols div { background:var(--tint); border:1px solid var(--line); padding:16px 18px; }
   .cols h3 { margin:0 0 6px; font-size:18px; }
   .cols p { margin:0; font-size:16px; color:var(--muted); }
-  @media (max-width:560px) { header .wrap { flex-direction:column; align-items:flex-start; } nav { justify-content:flex-start; } }
-  .totop { position:fixed; left:16px; bottom:16px; z-index:50; background:var(--markline); color:#0b0c0c; border:2px solid #0b0c0c; padding:8px 14px; font-size:15px; font-weight:700; text-decoration:none; }
-  .totop:hover { background:#ffd94d; }
-  .totop:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
-  section[id] { scroll-margin-top:16px; }
+  @media (max-width:560px) { header { padding:10px 0; } header .wrap { flex-direction:column; align-items:flex-start; gap:6px; } nav { flex-wrap:nowrap; overflow-x:auto; max-width:100%; justify-content:flex-start; padding-bottom:4px; } }
+  section[id] { scroll-margin-top:96px; }
+  @media (max-width:560px) { section[id] { scroll-margin-top:100px; } }
   footer { padding:28px 0 80px; border-top:1px solid var(--line); color:var(--muted); font-size:15px; }
 </style>
 </head>
-<body id="top">
+<body>
 <header>
   <div class="wrap">
     <a class="brand" href="/"><i aria-hidden="true"></i>Comments</a>
@@ -133,8 +131,6 @@
     </ul>
   </section>
 </main>
-
-<a class="totop" href="#top">Back to top</a>
 
 <footer>
   <div class="wrap">Made by <a href="https://gavinwye.com">Gavin Wye</a>. MIT licensed. <a href="https://github.com/gavinwye/comments.gavinwye.com">Source on GitHub</a>.</div>
