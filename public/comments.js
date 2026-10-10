@@ -267,16 +267,16 @@
       '.cmt-msg{margin:6px 0}.cmt-meta{font-size:12px;color:#505a5f}.cmt-body{font-size:15px;margin:2px 0;white-space:pre-wrap;word-wrap:break-word}' +
       '.cmt-actions{display:flex;gap:10px;margin-top:6px}' +
       '.cmt-actions button{background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline #ffc726 2px;text-underline-offset:3px}' +
-      '.cmt-reply{display:flex;gap:6px;margin-top:8px}.cmt-reply textarea{flex:1;font:inherit;font-size:14px;border:1px solid #b1b4b6;padding:6px;resize:vertical;min-height:34px}' +
+      '.cmt-reply{display:flex;gap:6px;margin-top:8px}.cmt-reply textarea{flex:1;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
       '.cmt-btn{background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer}.cmt-btn:hover{background:#ffd94d}' +
       '.cmt-selbtn{position:absolute;z-index:9002;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}' +
       '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:2px solid #0b0c0c;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
-      '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:1px solid #b1b4b6;padding:6px;resize:vertical;min-height:60px;box-sizing:border-box}' +
+      '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;resize:vertical;min-height:72px;box-sizing:border-box;outline:0}.cmt-composer textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer .cmt-label{display:block;font-size:14px;font-weight:700;color:#0b0c0c;margin:0 0 6px}' +
       '.cmt-composer .cmt-row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}' +
       '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer}';
     document.head.appendChild(css);
 
-    toggleBtn = el('button', 'cmt-toggle', '💬 Comments');
+    toggleBtn = el('button', 'cmt-toggle', 'Comments');
     toggleBtn.setAttribute('data-cmt', 'toggle');
     toggleBtn.addEventListener('click', function () { panel.classList.contains('cmt-open') ? closePanel() : openPanel(); });
     document.body.appendChild(toggleBtn);
@@ -310,7 +310,7 @@
   }
   function updateCount() {
     var n = threads.filter(function (t) { return !t.resolved; }).length;
-    toggleBtn.textContent = '💬 Comments' + (n ? ' (' + n + ')' : '');
+    toggleBtn.textContent = 'Comments' + (n ? ' (' + n + ')' : '');
   }
 
   function renderPanel() {
@@ -343,7 +343,7 @@
   }
   function showReply(box, id) {
     if (box.querySelector('.cmt-reply')) return;
-    var wrap = el('div', 'cmt-reply'); var ta = el('textarea'); var send = el('button', 'cmt-btn', 'Post');
+    var wrap = el('div', 'cmt-reply'); var ta = el('textarea'); var send = el('button', 'cmt-btn', 'Post'); ta.id = 'cmt-reply-' + id; ta.setAttribute('aria-label', 'Your reply');
     ta.addEventListener('click', function (e) { e.stopPropagation(); });
     send.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -385,7 +385,7 @@
       if (quote.length < 2) return;
       emit('comments:select', { el: range.startContainer.parentElement });
       var rect = range.getBoundingClientRect();
-      selBtn = el('button', 'cmt-selbtn', '💬 Comment');
+      selBtn = el('button', 'cmt-selbtn', 'Comment');
       selBtn.style.top = (window.scrollY + rect.bottom + 6) + 'px';
       selBtn.style.left = (window.scrollX + rect.left) + 'px';
       var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end') };
@@ -413,7 +413,8 @@
     composer = el('div', 'cmt-composer');
     composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
     composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
-    var ta = el('textarea'); ta.placeholder = 'Add your comment…';
+    var ta = el('textarea'); ta.id = 'cmt-new';
+    var lab = el('label', 'cmt-label', 'Your comment'); lab.setAttribute('for', 'cmt-new');
     var row = el('div', 'cmt-row');
     var cancel = el('button', 'cmt-cancel', 'Cancel'); cancel.addEventListener('click', removeComposer);
     var post = el('button', 'cmt-btn', 'Comment');
@@ -430,7 +431,7 @@
       });
     });
     row.appendChild(cancel); row.appendChild(post);
-    composer.appendChild(ta); composer.appendChild(row);
+    composer.appendChild(lab); composer.appendChild(ta); composer.appendChild(row);
     document.body.appendChild(composer); ta.focus();
   }
   document.addEventListener('mousedown', function (e) {
