@@ -250,11 +250,32 @@
     var name = String(pin.src || "").split("?")[0].split("/").pop();
     return name || "image";
   }
+  // Threads in the order they appear on the page: text by its highlight, pins
+  // by their image (then top to bottom, left to right). Anything that can no
+  // longer be placed goes last, oldest first.
+  function anchorNode(t) {
+    if (t.pin) return findImage(t.pin);
+    return document.querySelector('mark.cmt-hl[data-thread="' + cssId(t.id) + '"]');
+  }
+  function byPosition(list) {
+    var rows = list.map(function (t) { return { t: t, n: anchorNode(t) }; });
+    rows.sort(function (a, b) {
+      if (!a.n || !b.n) {
+        if (a.n !== b.n) return a.n ? -1 : 1;
+        return (a.t.createdAt || 0) - (b.t.createdAt || 0);
+      }
+      if (a.n === b.n) {
+        var pa = a.t.pin || { x: 0, y: 0 }, pb = b.t.pin || { x: 0, y: 0 };
+        return (pa.y - pb.y) || (pa.x - pb.x) || ((a.t.createdAt || 0) - (b.t.createdAt || 0));
+      }
+      return a.n.compareDocumentPosition(b.n) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+    return rows.map(function (r) { return r.t; });
+  }
   var pinEls = [];
   function renderPins() {
     pinEls.forEach(function (e) { e.remove(); }); pinEls = [];
-    var pinned = threads.filter(function (t) { return t.pin; })
-      .sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    var pinned = byPosition(threads.filter(function (t) { return t.pin; }));
     pinned.forEach(function (t, n) {
       var img = findImage(t.pin);
       found[t.id] = !!img;
@@ -409,7 +430,7 @@
 
   function renderPanel() {
     listEl.innerHTML = '';
-    var visible = threads.filter(function (t) { return showResolved || !t.resolved; });
+    var visible = byPosition(threads.filter(function (t) { return showResolved || !t.resolved; }));
     if (!visible.length) {
       listEl.appendChild(el('div', 'cmt-empty', COMMENTS_CONFIG.pins ? 'No comments yet. Select any text on the page to start one, or pin one to an image.' : 'No comments yet. Select any text on the page to start one.'));
       return;
