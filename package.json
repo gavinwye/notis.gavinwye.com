@@ -8,6 +8,8 @@
   "homepage": "https://notis.gavinwye.com",
   "scripts": {
     "dev": "netlify dev",
+    "build:server": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
     "deploy": "netlify deploy --prod"
   },
   "dependencies": {

@@ -2,8 +2,8 @@
 # directory is `site`. It has no function: the demo keeps comments in the
 # visitor's browser, so nobody can post to a server from the public page.
 [build]
-  command = "cp ../public/comments.js comments.js && mkdir -p server && cp ../netlify/functions/comments.mjs server/comments.mjs"
+  command = "cp ../public/comments.js comments.js && node ../scripts/build.mjs server"
   publish = "."
   # The page loads ../public/comments.js, so a change there must rebuild the
   # site too. Exit 0 means "nothing relevant changed, skip the build".
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ../public ../netlify"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ../public ../server ../scripts"

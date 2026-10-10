@@ -82,31 +82,81 @@ The widget fires events on `document`, so a page can react to a comment, for exa
 | `comments:select` | `{ el }` | text was selected inside the root |
 | `comments:focus` | `{ el }` | a thread's highlight was focused |
 | `comments:close` | | the panel was closed |
+| `comments:created` | `{ thread }` | a comment was posted |
+| `comments:replied` | `{ id }` | a reply was posted |
+| `comments:resolved` | `{ id, resolved }` | a thread was resolved or reopened |
 
 ## Run your own server
 
-1. Push this repo to GitHub and import it into Netlify, or run `npm run deploy`.
-2. Netlify reads `netlify.toml`, publishes `public/` and bundles the function.
-3. Set `COMMENTS_ADMIN_TOKEN` in the site's environment variables (a long random string).
+The API is one small piece of code that talks to a storage object, with a short adapter for each host. Pick the one you already use:
 
-The only dependency is `@netlify/blobs`.
+| Host | File | Comments are kept in | Notes |
+|---|---|---|---|
+| **Netlify** | [`server/netlify.mjs`](server/netlify.mjs) | Netlify Blobs, in your account | Drop it in `netlify/functions/comments.mjs`, `npm i @netlify/blobs` |
+| **Cloudflare Workers** | [`server/cloudflare.mjs`](server/cloudflare.mjs) | a Workers KV namespace bound as `COMMENTS` | Route `your-site/api/comments*` to the Worker |
+| **Any Node 18+ server** | [`server/node.mjs`](server/node.mjs) | JSON files in a folder (`COMMENTS_DIR`) | `node server.mjs`. Works in Docker, on a VPS, on Fly or Railway |
+| **Browser only** | none | each reviewer's own browser | `apiBase: null`. Not shared |
+
+Each file is also available on its own at `https://notis.gavinwye.com/server/<host>.mjs`, with the core code built in, so you can download one file and use it. In the repo they share `server/core.mjs`, and `npm run build:server` writes the single files.
+
+Cloudflare, with a Worker named `notis`:
+
+```toml
+# wrangler.toml
+name = "notis"
+main = "cloudflare.mjs"
+compatibility_date = "2024-09-01"
+kv_namespaces = [{ binding = "COMMENTS", id = "<your KV namespace id>" }]
+routes = [{ pattern = "your-site.example/api/comments*", zone_name = "your-site.example" }]
+```
+
+Run `wrangler secret put COMMENTS_ADMIN_TOKEN`, then `wrangler deploy`.
+
+Node, in a container:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY node.mjs .
+ENV COMMENTS_DIR=/data PORT=8787
+VOLUME /data
+CMD ["node", "node.mjs"]
+```
+
+If it's on a different address from your site, give the widget the full URL (`apiBase: "https://notis.example.com/api"`) and set `COMMENTS_ALLOWED_ORIGINS` to your site.
 
 ### Server settings
 
 | Variable | Default | What it does |
 |---|---|---|
-| `COMMENTS_STORE` | `comments` | Blob store name. Use a different one for each site. |
 | `COMMENTS_ADMIN_TOKEN` | unset | Needed to delete. If unset, all deletes are refused. |
 | `COMMENTS_ALLOWED_ORIGINS` | unset (any) | Comma-separated origins allowed to call the API from a browser. Set this to your site. |
+| `COMMENTS_STORE` | `comments` | Netlify only: the blob store name. Use a different one for each site. |
+| `COMMENTS_DIR` | `./comments-data` | Node only: where the files go. |
+| `PORT` | `8787` | Node only. |
+
+Each thread is stored on its own, so two reviewers commenting at the same moment don't overwrite each other.
 
 ## Where your comments live
 
-In your own Netlify account. The function keeps every thread in one [Netlify Blobs](https://docs.netlify.com/blobs/overview/) store (named `comments`, or whatever `COMMENTS_STORE` says), under the key `threads`. Nobody else holds a copy: there is no central Notis service, and the Notis site never sees your comments.
+On your own host, in your own account. On Netlify that's a [Netlify Blobs](https://docs.netlify.com/blobs/overview/) store (named `comments`, or whatever `COMMENTS_STORE` says), one blob per thread under `t/<id>`. On Cloudflare it's your KV namespace, and on Node it's a folder of JSON files. Nobody else holds a copy: there is no central Notis service, and the Notis site never sees your comments.
 
 - **One store for the whole site.** Production and deploy previews share it. A comment left on a preview also shows on any page with the same `pageId` in production. Use a different `COMMENTS_STORE` per site, and give previews their own `pageId` if you don't want that.
-- **Export or back up:** `netlify blobs:get comments threads > comments-backup.json`
+- **Export or back up:** `curl -H "Authorization: Bearer $COMMENTS_ADMIN_TOKEN" https://your-site/api/comments > comments-backup.json` works on any host. On Netlify you can also use `netlify blobs:list comments`.
 - **Read them while running locally:** `netlify dev` uses a local sandbox, so comments left there don't reach your live site.
 - **The demo is different.** With `apiBase: null` (as on the Notis site), comments stay in each visitor's browser and are never sent anywhere.
+
+### Analytics
+
+Notis sends nothing anywhere except to your own API, and it has no tracking of its own. If you want to count activity, listen for the events and send them to the analytics you already use:
+
+```js
+document.addEventListener("comments:created", () => umami.track("comment-created"));
+```
+
+## Bugs and ideas
+
+Open an issue on GitHub: [report a bug](https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml) or [suggest something](https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=feature_request.yml). The bug form asks which host you use and for the version, which you can read by typing `NotisVersion` in the browser console. Security problems should go through [SECURITY.md](SECURITY.md) instead.
 
 ## The API
 
@@ -175,7 +225,10 @@ Worth knowing before you rely on it.
 
 ```
 public/comments.js            the widget
-netlify/functions/comments.mjs  the API
+server/core.mjs               the API, with no host in it
+server/{netlify,cloudflare,node}.mjs   one adapter per host
+scripts/build.mjs             builds single-file versions into site/server/
+test/                         `npm test`
 site/                         the website (notis.gavinwye.com)
 docs/PLAN.md                  how we're publishing it
 ```
