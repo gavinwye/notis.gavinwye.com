@@ -1,6 +1,9 @@
-# The website for comments.gavinwye.com. In Netlify, set this project's base
-# directory to `site`. It has no function: the demo keeps comments in the
+# The website for comments.gavinwye.com. In Netlify, this project's base
+# directory is `site`. It has no function: the demo keeps comments in the
 # visitor's browser, so nobody can post to a server from the public page.
 [build]
   command = "cp ../public/comments.js comments.js"
   publish = "."
+  # The page loads ../public/comments.js, so a change there must rebuild the
+  # site too. Exit 0 means "nothing relevant changed, skip the build".
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ../public"
