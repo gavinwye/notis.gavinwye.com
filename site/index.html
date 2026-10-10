@@ -150,10 +150,13 @@
   document.getElementById("copy-prompt").addEventListener("click", function () {
     var text = document.getElementById("agent-prompt").textContent, note = document.getElementById("copy-note");
     function done(msg) { note.textContent = msg; setTimeout(function () { note.textContent = ""; }, 2500); }
+    if (window.umami && window.umami.track) window.umami.track("copy-agent-prompt");
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done("Copied."); }, function () { done("Select the text and copy it."); });
     else done("Select the text and copy it.");
   });
 </script>
+<!-- Page views and one event, on the site's own Umami (stats.gavinwye.com). Only counts on notis.gavinwye.com, not on previews or localhost. The widget itself sends nothing. -->
+<script defer src="https://stats.gavinwye.com/script.js" data-website-id="01b4bb86-648b-43e5-83bb-a845fabd0bd2" data-domains="notis.gavinwye.com" data-do-not-track="true"></script>
 <script>window.COMMENTS_CONFIG = { apiBase: null, pageId: "demo", root: "main" };</script>
 <script src="/comments.js" defer></script>
 </body>
