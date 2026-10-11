@@ -21,6 +21,20 @@ It was built to get fast reactions to early prototypes.
 - **A JSON API.** A script (or an AI assistant) can read the open comments and work through them. See [Closing the loop](#closing-the-loop).
 - **One file in, one file out.** `comments.js` has no dependencies and injects its own styles.
 
+## What it looks like
+
+![A comment box open on a paragraph, with a name and a comment typed in](docs/images/comment-box.png)
+
+The comment box asks for a name once, then the comment.
+
+![The side panel listing three comments, one of them a pin on an image](docs/images/panel.png)
+
+Every comment is in one list, in the order it appears on the page.
+
+![A round numbered pin on the Continue button of a wireframe](docs/images/pin.png)
+
+A pin marks a point on an image. It stays there when the image is resized.
+
 ## Try it
 
 ```bash
