@@ -12,3 +12,4 @@ dist/
 site/v[0-9]*/
 site/version.json
 site/.stage-*
+.claude/worktrees/

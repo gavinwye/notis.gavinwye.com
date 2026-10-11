@@ -162,11 +162,16 @@
 
   /* ---------- anchoring (W3C text-quote style) ---------- */
   function rootEl() { return document.querySelector(COMMENTS_CONFIG.root) || document.body; }
+  // Our own interface is not page text. Highlights and the pending mark are
+  // the page's own words wearing a mark, so they stay in the text index:
+  // otherwise a selection next to an existing comment would save a prefix
+  // and suffix with those words missing, and would not find itself again.
+  var UI = '[data-cmt]:not(mark.cmt-hl):not(mark.cmt-pending)';
   function textNodes(root) {
     var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: function (n) {
         if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        if (n.parentElement && n.parentElement.closest("[data-cmt]")) return NodeFilter.FILTER_REJECT;
+        if (n.parentElement && n.parentElement.closest(UI)) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -177,62 +182,119 @@
     nodes.forEach(function (node) { map.push({ node: node, start: full.length, end: full.length + node.nodeValue.length }); full += node.nodeValue; });
     return { full: full, map: map };
   }
+  // Try the quote with all of its context, then with half of it, then alone.
+  // The context says which occurrence was meant when a word appears twice.
+  function contexts(thread) {
+    var pre = thread.prefix || "", suf = thread.suffix || "", out = [[pre, suf]];
+    if (suf) out.push([pre, ""]);
+    if (pre) out.push(["", suf]);
+    if (pre || suf) out.push(["", ""]);
+    return out;
+  }
   function locate(ix, thread) {
-    var idx = -1;
-    if (thread.prefix || thread.suffix) {
-      var probe = thread.prefix + thread.quote + thread.suffix, p = ix.full.indexOf(probe);
-      if (p >= 0) idx = p + thread.prefix.length;
+    var q = String(thread.quote || ""), tries = contexts(thread), i, p;
+    if (!q) return null;
+    for (i = 0; i < tries.length; i++) {
+      p = ix.full.indexOf(tries[i][0] + q + tries[i][1]);
+      if (p >= 0) { p += tries[i][0].length; return { start: p, end: p + q.length }; }
     }
-    if (idx < 0) idx = ix.full.indexOf(thread.quote);
-    if (idx >= 0) return { start: idx, end: idx + thread.quote.length };
-    return locateLoose(ix, thread.quote);
+    return locateLoose(ix, thread, tries);
   }
   // A selection that crosses paragraphs or list items carries line breaks the
-  // page's text does not, so compare with all whitespace left out and map the
-  // match back to real positions.
-  function locateLoose(ix, quote) {
-    var want = String(quote).replace(/\s+/g, "");
+  // page's text does not (and a phone adds non-breaking spaces), so compare
+  // with all whitespace left out and map the match back to real positions.
+  function locateLoose(ix, thread, tries) {
+    var strip = function (x) { return String(x || "").replace(/\s+/g, ""); };
+    var want = strip(thread.quote);
     if (want.length < 2) return null;
-    var flat = "", at = [], i, ch;
-    for (i = 0; i < ix.full.length; i++) {
-      ch = ix.full.charAt(i);
-      if (/\s/.test(ch)) continue;
-      flat += ch; at.push(i);
+    if (!ix.flat) {
+      var flat = "", at = [], i, ch;
+      for (i = 0; i < ix.full.length; i++) {
+        ch = ix.full.charAt(i);
+        if (/\s/.test(ch)) continue;
+        flat += ch; at.push(i);
+      }
+      ix.flat = flat; ix.at = at;
     }
-    var f = flat.indexOf(want);
-    if (f < 0) return null;
-    return { start: at[f], end: at[f + want.length - 1] + 1 };
+    for (var k = 0; k < tries.length; k++) {
+      var a = strip(tries[k][0]), b = strip(tries[k][1]), f = ix.flat.indexOf(a + want + b);
+      if (f >= 0) {
+        f += a.length;
+        return { start: ix.at[f], end: ix.at[f + want.length - 1] + 1 };
+      }
+    }
+    return null;
   }
-  function highlightRange(ix, thread, start, end) {
-    ix.map.forEach(function (seg) {
-      if (seg.end <= start || seg.start >= end) return;
-      var a = Math.max(start, seg.start) - seg.start, b = Math.min(end, seg.end) - seg.start;
-      var r = document.createRange();
-      try { r.setStart(seg.node, a); r.setEnd(seg.node, b); } catch (e) { return; }
-      var m = document.createElement("mark");
-      m.className = "cmt-hl"; m.setAttribute("data-cmt", "hl"); m.dataset.thread = thread.id;
-      if (thread.resolved) m.dataset.resolved = "1";
-      m.addEventListener("click", function (e) { e.stopPropagation(); openPanel(); focusThread(thread.id); });
-      try { r.surroundContents(m); } catch (e) { /* spans block boundary — skip this segment */ }
-    });
+  // Wrap every piece of text once, however many comments cover it. A piece
+  // records all of the threads that cover it, so comments can overlap, nest or
+  // sit on the same words and every one of them keeps a highlight.
+  function wrapPieces(seg, hits, wrapped) {
+    var len = seg.node.nodeValue.length, cuts = { 0: 1 }, pts, pieces = [], i, k;
+    cuts[len] = 1;
+    var clamp = function (n) { return Math.max(0, Math.min(len, n)); };
+    hits.forEach(function (r) { cuts[clamp(r.start - seg.start)] = 1; cuts[clamp(r.end - seg.start)] = 1; });
+    pts = Object.keys(cuts).map(Number).sort(function (x, y) { return x - y; });
+    for (i = 0; i < pts.length - 1; i++) {
+      var a = pts[i], b = pts[i + 1];
+      var cover = hits.filter(function (r) { return r.start - seg.start <= a && r.end - seg.start >= b; });
+      if (cover.length) pieces.push({ a: a, b: b, cover: cover });
+    }
+    // From the end of the node backwards, so the offsets of earlier pieces stay valid.
+    var node = seg.node;
+    for (k = pieces.length - 1; k >= 0; k--) {
+      var pc = pieces[k];
+      try {
+        if (pc.b < node.nodeValue.length) node.splitText(pc.b);
+        var mid = pc.a > 0 ? node.splitText(pc.a) : node;
+        var ordered = pc.cover.map(function (r) { return r.thread; })
+          .sort(function (x, y) { return (x.createdAt || 0) - (y.createdAt || 0); });
+        var m = document.createElement("mark");
+        m.className = "cmt-hl"; m.setAttribute("data-cmt", "hl");
+        m.dataset.threads = ordered.map(function (t) { return t.id; }).join(" ");
+        m.dataset.thread = ordered[ordered.length - 1].id;   // the newest one
+        m.dataset.count = String(ordered.length);
+        if (ordered.every(function (t) { return t.resolved; })) m.dataset.resolved = "1";
+        m.addEventListener("click", markClick);
+        mid.parentNode.insertBefore(m, mid);
+        m.appendChild(mid);
+        ordered.forEach(function (t) { wrapped[t.id] = true; });
+      } catch (e) { /* this piece stays unmarked; the thread is reported as not found below */ }
+    }
   }
+  // Click a highlight to open its comment. Where several comments sit on the
+  // same words, each click moves on to the next, newest first.
+  function markClick(e) {
+    e.stopPropagation();
+    var m = e.currentTarget, ids = (m.dataset.threads || "").split(" ").filter(Boolean);
+    if (!ids.length) return;
+    var i = Number(m.dataset.cycle || 0);
+    m.dataset.cycle = String(i + 1);
+    openPanel();
+    focusThread(ids[ids.length - 1 - (i % ids.length)]);
+  }
+  var placed = {}; // thread id -> where its text starts in the page's text
   // Build the text index ONCE from the un-highlighted DOM, locate every thread
-  // against that single snapshot, then apply highlights from the last match to
-  // the first. Wrapping a later match in a <mark> can't then shift the offsets
-  // of earlier ones (which was corrupting multi-comment pages).
+  // against that snapshot, then cut each text node at every comment boundary.
   function applyHighlights() {
     var ix = buildIndex(rootEl());
-    var located = [];
-    found = {};
+    var ranges = [], wrapped = {};
+    found = {}; placed = {};
     threads.forEach(function (t) {
       if (t.pin) return; // pinned to an image; renderPins() places these
       var loc = locate(ix, t);
-      if (loc) found[t.id] = true;
+      if (!loc || loc.end <= loc.start) return;
+      found[t.id] = true; placed[t.id] = loc.start;
       if (t.resolved && !showResolved) return;
-      if (loc) located.push({ thread: t, start: loc.start, end: loc.end });
+      ranges.push({ thread: t, start: loc.start, end: loc.end });
     });
-    located.sort(function (a, b) { return b.start - a.start; });
-    located.forEach(function (item) { highlightRange(ix, item.thread, item.start, item.end); });
+    ix.map.forEach(function (seg) {
+      var hits = ranges.filter(function (r) { return r.end > seg.start && r.start < seg.end; });
+      if (hits.length) wrapPieces(seg, hits, wrapped);
+    });
+    // A comment that could not be marked is reported as changed, never dropped quietly.
+    ranges.forEach(function (r) {
+      if (!wrapped[r.thread.id]) { found[r.thread.id] = false; delete placed[r.thread.id]; }
+    });
   }
   function clearHighlights() {
     document.querySelectorAll('mark.cmt-hl').forEach(function (m) {
@@ -260,18 +322,26 @@
   // longer be placed goes last, oldest first.
   function anchorNode(t) {
     if (t.pin) return findImage(t.pin);
-    return document.querySelector('mark.cmt-hl[data-thread="' + cssId(t.id) + '"]');
+    return document.querySelector('mark.cmt-hl[data-threads~="' + cssId(t.id) + '"]');
   }
   function byPosition(list) {
-    var rows = list.map(function (t) { return { t: t, n: anchorNode(t) }; });
+    var rows = list.map(function (t) {
+      var text = !t.pin && found[t.id] && placed[t.id] != null;
+      return { t: t, n: text || t.pin ? anchorNode(t) : null, s: text ? placed[t.id] : null };
+    });
+    var created = function (r) { return r.t.createdAt || 0; };
     rows.sort(function (a, b) {
+      // anything that can't be placed any more goes last, oldest first
       if (!a.n || !b.n) {
-        if (a.n !== b.n) return a.n ? -1 : 1;
-        return (a.t.createdAt || 0) - (b.t.createdAt || 0);
+        if (!a.n && !b.n) return created(a) - created(b);
+        return a.n ? -1 : 1;
       }
+      // two pieces of text: by where they start in the page's text
+      if (a.s != null && b.s != null) return (a.s - b.s) || (created(a) - created(b));
+      // anything else involves an image: by document order, then top to bottom, left to right
       if (a.n === b.n) {
         var pa = a.t.pin || { x: 0, y: 0 }, pb = b.t.pin || { x: 0, y: 0 };
-        return (pa.y - pb.y) || (pa.x - pb.x) || ((a.t.createdAt || 0) - (b.t.createdAt || 0));
+        return (pa.y - pb.y) || (pa.x - pb.x) || (created(a) - created(b));
       }
       return a.n.compareDocumentPosition(b.n) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
     });
@@ -323,7 +393,11 @@
     setPinMode(false);
     openComposer({ quote: "", prefix: "", suffix: "", pin: pin }, { bottom: e.clientY, left: e.clientX });
   }, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && pinMode) setPinMode(false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (pinMode) setPinMode(false);
+    else if (!composer && panel && panel.classList.contains('cmt-open')) closePanel();
+  });
   window.addEventListener("resize", function () { renderPins(); });
   window.addEventListener("load", function () { renderPins(); });
 
@@ -350,6 +424,7 @@
       '[data-cmt]{box-sizing:border-box;font-family:"Figtree",arial,sans-serif;line-height:1.45;font-style:normal;letter-spacing:normal}' +
       '.cmt-panel,.cmt-composer{color:#0b0c0c;color-scheme:light}.cmt-panel .cmt-body{color:#0b0c0c}.cmt-panel label{color:#505a5f}' +
       'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #ffc726;cursor:pointer;padding:0 1px}' +
+      'mark.cmt-hl[data-count="2"]{background:#ffe9a0;border-bottom-width:3px}mark.cmt-hl[data-count="3"],mark.cmt-hl[data-count="4"],mark.cmt-hl[data-count="5"]{background:#ffdd73;border-bottom-width:4px}' +
       'mark.cmt-hl[data-resolved]{background:#eef0f2;border-bottom-color:#b1b4b6}' +
       'mark.cmt-hl.cmt-flash{animation:cmtFlash 1.2s ease}' +
       '@keyframes cmtFlash{0%,100%{background:#fff3c4}50%{background:#ffd94d}}' +
@@ -375,7 +450,7 @@
       '.cmt-msg{margin:6px 0}.cmt-meta{font-size:12px;color:#505a5f}.cmt-body{font-size:15px;margin:2px 0;white-space:pre-wrap;word-wrap:break-word}' +
       '.cmt-actions{display:flex;gap:10px;margin-top:6px}' +
       '.cmt-actions button{background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline #ffc726 2px;text-underline-offset:3px}' +
-      '.cmt-reply{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmt-reply input{flex:1 1 100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;outline:0}.cmt-reply input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-reply input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-reply textarea{flex:1;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
+      '.cmt-reply{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmt-reply input{flex:1 1 100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;outline:0}.cmt-reply input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-reply input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-reply textarea{flex:1;min-width:0;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
       '.cmt-btn{background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer}.cmt-btn:hover{background:#ffd94d}' +
       '.cmt-selbtn{position:absolute;z-index:9002;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}' +
       '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:2px solid #0b0c0c;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
@@ -386,7 +461,55 @@
       '.cmt-pin.cmt-flash{animation:cmtPin 1.2s ease}@keyframes cmtPin{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}' +
       'html.cmt-pinning img{cursor:crosshair !important;outline:3px dashed #ffc726;outline-offset:3px}' +
       '.cmt-pinhint{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9004;background:#0b0c0c;color:#fff;padding:10px 16px;font-size:15px;font-weight:600}' +
+      '.cmt-panel.cmt-typing .cmt-foot{display:none}' +
+      '.cmt-foot{flex:none;padding:10px 16px;border-top:2px solid #0b0c0c;background:#fff}.cmt-foot .cmt-footclose{width:100%;padding:10px 12px;font-size:15px}' +
+      '.cmt-head .cmt-close{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;padding:0;background:#fff;color:#0b0c0c;border:2px solid #0b0c0c;cursor:pointer}.cmt-head .cmt-close:hover{background:#0b0c0c;color:#fff}.cmt-head .cmt-close:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}' +
       '.cmt-head .cmt-pinbtn{background:#0b0c0c;color:#fff;border:0;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}.cmt-head .cmt-pinbtn.cmt-on{background:#fff;color:#0b0c0c;box-shadow:inset 0 0 0 2px #0b0c0c}' +
+      '.cmt-selbar{position:fixed;left:12px;right:12px;bottom:12px;z-index:9004;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:14px 16px;font:700 17px/1.2 "Figtree",arial,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}' +
+      '.cmt-selbar:active{background:#ffd94d}' +
+      // Phones and narrow screens: the panel is a full-width sheet that never overflows.
+      '@media (pointer:coarse){.cmt-panel input[type=text],.cmt-panel textarea,.cmt-composer input,.cmt-composer textarea{font-size:16px}}' +
+      '@media (max-width:600px),(pointer:coarse) and (max-width:900px){' +
+        '.cmt-panel{left:0;right:0;width:100%;max-width:100%;border-left:0;overflow-x:hidden;box-shadow:none;height:100vh;height:100dvh;overscroll-behavior:contain}' +
+        '.cmt-panel *{min-width:0;box-sizing:border-box}' +
+        '.cmt-head{padding:6px 8px 6px 16px;gap:8px}' +
+        '.cmt-head h2{flex:1;min-width:0}' +
+        '.cmt-head button{min-width:44px;min-height:44px}.cmt-head .cmt-close{width:44px;height:44px}.cmt-foot .cmt-footclose{min-height:44px}.cmt-foot{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}' +
+        '.cmt-head .cmt-pinbtn{padding:0 12px;font-size:15px}' +
+        '.cmt-sub{padding:0 8px 0 16px;font-size:16px;min-height:44px}' +
+        '.cmt-sub input{width:22px;height:22px;margin:0 10px 0 0;flex:none}' +
+        '.cmt-sub label{flex:1;display:flex;align-items:center;min-height:44px;cursor:pointer}' +
+        '.cmt-list{overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 0 24px}' +
+        '.cmt-thread{padding:14px 16px}' +
+        '.cmt-quote,.cmt-body,.cmt-meta{overflow-wrap:anywhere;word-break:break-word}' +
+        '.cmt-quote{font-size:14px}.cmt-body{font-size:16px}.cmt-meta{font-size:13px}' +
+        '.cmt-actions{gap:4px;margin-top:4px}' +
+        '.cmt-actions button{min-height:44px;min-width:44px;padding:0 12px 0 0;font-size:15px;text-align:left}' +
+        '.cmt-reply{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:8px;margin-top:6px}' +
+        '.cmt-reply input,.cmt-reply textarea{flex:none;width:100%;min-height:48px;font-size:16px;padding:12px}' +
+        '.cmt-reply textarea{min-height:88px}' +
+        '.cmt-reply .cmt-btn,.cmt-reply .cmt-cancel{width:100%;min-height:48px;font-size:16px}' +
+        '.cmt-reply .cmt-cancel{background:none;border:2px solid transparent;color:#505a5f;font-weight:700;cursor:pointer}' +
+      '}' +
+      'html.cmt-selecting .cmt-toggle{display:none}' +
+      '.cmt-composer.cmt-sheet{position:fixed;top:auto;left:0;right:0;bottom:0;width:auto;max-height:85vh;overflow:auto;border-width:2px 0 0;padding:14px 16px 18px;box-shadow:0 -4px 16px rgba(0,0,0,.25);z-index:9005}' +
+      '.cmt-composer.cmt-sheet input,.cmt-composer.cmt-sheet textarea{font-size:16px}' +
+      // The phone sheet is two short steps (name, then comment) so the keyboard leaves room for the page.
+      '.cmt-composer.cmt-compact{padding:10px 12px 12px;max-height:none}' +
+      '.cmt-compact .cmt-step[hidden]{display:none}' +
+      '.cmt-compact .cmt-q{font-size:14px;color:#505a5f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid #ffc726;padding-left:8px;margin:0 0 8px}' +
+      '.cmt-composer.cmt-compact textarea{min-height:0;height:58px;padding:6px 8px;margin:0}' +
+      '.cmt-composer.cmt-compact input{margin:0;height:42px;flex:1;min-width:0}' +
+      '.cmt-compact .cmt-top{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px;font-size:15px;font-weight:700}' +
+      '.cmt-compact .cmt-nameline{display:flex;gap:8px}' +
+      '.cmt-compact .cmt-row{margin-top:8px;justify-content:space-between;align-items:center}' +
+      '.cmt-compact .cmt-btns{display:flex;gap:6px;align-items:center}' +
+      '.cmt-compact .cmt-who{font-size:14px;color:#505a5f}' +
+      '.cmt-compact .cmt-link{background:none;border:0;color:#0b0c0c;font:inherit;font-weight:700;padding:0 0 0 4px;text-decoration:underline #ffc726 2px;text-underline-offset:3px;cursor:pointer}' +
+      '.cmt-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+      // The words being commented on stay visible once the native selection clears.
+      'mark.cmt-pending{font:inherit;color:#0b0c0c;background:#ffd94d;border-bottom:2px dashed #0b0c0c;padding:0 1px}' +
+      '.cmt-composer.cmt-sheet .cmt-btn{padding:10px 18px;font-size:16px}.cmt-composer.cmt-sheet .cmt-cancel{padding:10px 12px;font-size:16px}' +
       '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer}';
     document.head.appendChild(css);
 
@@ -397,7 +520,13 @@
 
     panel = el('aside', 'cmt-panel'); panel.setAttribute('data-cmt', 'panel'); panel.setAttribute('aria-label', 'Comments');
     var head = el('div', 'cmt-head');
-    var h2 = el('h2', '', 'Comments'); var close = el('button', '', '×'); close.setAttribute('aria-label', 'Close comments');
+    var h2 = el('h2', '', 'Comments');
+    var close = el('button', 'cmt-close'); close.setAttribute('aria-label', 'Close comments'); close.title = 'Close';
+    var svgNS = 'http://www.w3.org/2000/svg', icon = document.createElementNS(svgNS, 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('width', '20'); icon.setAttribute('height', '20'); icon.setAttribute('aria-hidden', 'true'); icon.setAttribute('focusable', 'false');
+    var xPath = document.createElementNS(svgNS, 'path');
+    xPath.setAttribute('d', 'M5 5l14 14M19 5L5 19'); xPath.setAttribute('stroke', 'currentColor'); xPath.setAttribute('stroke-width', '3'); xPath.setAttribute('stroke-linecap', 'square'); xPath.setAttribute('fill', 'none');
+    icon.appendChild(xPath); close.appendChild(icon);
     close.addEventListener('click', closePanel); head.appendChild(h2);
     if (COMMENTS_CONFIG.pins) {
       pinBtn = el('button', 'cmt-pinbtn', 'Pin on image'); pinBtn.setAttribute('aria-pressed', 'false');
@@ -411,20 +540,60 @@
     var lbl = el('label', '', 'Show resolved'); lbl.setAttribute('for', 'cmt-showres');
     sub.appendChild(resolvedChk); sub.appendChild(lbl);
     listEl = el('div', 'cmt-list');
-    panel.appendChild(head); panel.appendChild(sub); panel.appendChild(listEl);
+    var foot = el('div', 'cmt-foot');
+    var closeBtn = el('button', 'cmt-btn cmt-footclose', 'Close');
+    closeBtn.addEventListener('click', closePanel);
+    foot.appendChild(closeBtn);
+    panel.appendChild(head); panel.appendChild(sub); panel.appendChild(listEl); panel.appendChild(foot);
+    // On a phone, the bottom Close button would sit above the keyboard while someone
+    // types a reply and eat the space they need. Hide it until the field loses focus.
+    panel.addEventListener('focusin', function (e) {
+      if (isTouch() && e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName) && !foot.contains(e.target)) panel.classList.add('cmt-typing');
+    });
+    panel.addEventListener('focusout', function () {
+      setTimeout(function () {
+        var a = document.activeElement;
+        if (!(a && panel.contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName))) panel.classList.remove('cmt-typing');
+      }, 0);
+    });
     document.body.appendChild(panel);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', fitPanel);
+      window.visualViewport.addEventListener('scroll', fitPanel);
+    }
+    window.addEventListener('resize', fitPanel);
 
-    document.addEventListener('mouseup', onSelect);
-    document.addEventListener('keyup', onSelect);
+    document.addEventListener('mouseup', function () { mouseIsDown = false; scheduleSelect(1); });
+    document.addEventListener('keyup', function () { scheduleSelect(1); });
+    // A long-press on a phone fires neither of those, only selectionchange.
+    // While a mouse button is held the selection is still being dragged, so wait.
+    document.addEventListener('mousedown', function () { mouseIsDown = true; }, true);
+    document.addEventListener('selectionchange', function () { if (!mouseIsDown) scheduleSelect(150); });
   }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; e.setAttribute && e.setAttribute('data-cmt', e.getAttribute('data-cmt') || 'ui'); return e; }
 
+  function isCompact() {
+    try { return window.matchMedia('(max-width:600px)').matches || (isTouch() && window.matchMedia('(max-width:900px)').matches); } catch (e) { return false; }
+  }
+  // On a phone the panel is sized to what is actually visible, so the keyboard
+  // never covers the reply box: 100vh on iOS includes the part under it.
+  function fitPanel() {
+    if (!panel) return;
+    var vv = window.visualViewport;
+    if (!isCompact() || !vv) { panel.style.top = ''; panel.style.height = ''; return; }
+    panel.style.top = vv.offsetTop + 'px';
+    panel.style.height = vv.height + 'px';
+    var a = document.activeElement;
+    if (a && panel.contains(a) && a.scrollIntoView) { try { a.scrollIntoView({ block: 'nearest' }); } catch (e) { /* old browser */ } }
+  }
   function openPanel() {
     panel.classList.add('cmt-open');
+    fitPanel();
     if (COMMENTS_CONFIG.dock) { document.documentElement.classList.add('cmt-docked'); remember('comments:open', '1'); }
   }
   function closePanel() {
     panel.classList.remove('cmt-open');
+    if (document.activeElement && panel.contains(document.activeElement)) document.activeElement.blur();
     if (COMMENTS_CONFIG.dock) { document.documentElement.classList.remove('cmt-docked'); remember('comments:open', '0'); }
     emit('comments:close');
   }
@@ -437,7 +606,7 @@
     listEl.innerHTML = '';
     var visible = byPosition(threads.filter(function (t) { return showResolved || !t.resolved; }));
     if (!visible.length) {
-      listEl.appendChild(el('div', 'cmt-empty', COMMENTS_CONFIG.pins ? 'No comments yet. Select any text on the page to start one, or pin one to an image.' : 'No comments yet. Select any text on the page to start one.'));
+      listEl.appendChild(el('div', 'cmt-empty', (isTouch() ? 'No comments yet. Press and hold a word, drag to extend, then tap Comment.' : 'No comments yet. Select any text on the page to start one.') + (COMMENTS_CONFIG.pins ? ' You can also pin one to an image.' : '')));
       return;
     }
     visible.forEach(function (t) {
@@ -485,7 +654,17 @@
       nameIn.addEventListener('click', function (e) { e.stopPropagation(); });
       wrap.appendChild(nameIn);
     }
-    wrap.appendChild(ta); wrap.appendChild(send); box.appendChild(wrap); (nameIn || ta).focus();
+    wrap.appendChild(ta); wrap.appendChild(send);
+    if (isCompact()) {
+      var cancelReply = el('button', 'cmt-cancel', 'Cancel'); cancelReply.type = 'button';
+      cancelReply.addEventListener('click', function (e) { e.stopPropagation(); wrap.remove(); });
+      wrap.appendChild(cancelReply);
+    }
+    box.appendChild(wrap);
+    var first = nameIn || ta;
+    try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); }
+    // Show the whole reply box (including Post) in the visible part of the list.
+    try { wrap.scrollIntoView({ block: 'end' }); } catch (e) { /* old browser */ }
   }
   function markActive(id) {
     listEl.querySelectorAll('.cmt-thread.cmt-active').forEach(function (b) { b.classList.remove('cmt-active'); });
@@ -506,7 +685,7 @@
       emit('comments:focus', { el: pe });
       return;
     }
-    var m = document.querySelector('mark.cmt-hl[data-thread="' + cssId(id) + '"]');
+    var m = document.querySelector('mark.cmt-hl[data-threads~="' + cssId(id) + '"]');
     if (m) {
       m.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
       m.classList.add('cmt-flash'); setTimeout(function () { m.classList.remove('cmt-flash'); }, 1200);
@@ -515,43 +694,247 @@
   }
 
   /* ---------- selection -> new comment ---------- */
+  var selTimer = null, barBusy = false, mouseIsDown = false;
+  function isTouch() { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } }
+  function scheduleSelect(delay) { clearTimeout(selTimer); selTimer = setTimeout(onSelect, delay); }
   function onSelect() {
-    setTimeout(function () {
-      removeSelBtn();
-      var sel = window.getSelection();
-      if (!sel || sel.isCollapsed) return;
-      var range = sel.getRangeAt(0);
-      if (!rootEl().contains(range.commonAncestorContainer)) return;
-      if (range.startContainer.parentElement && range.startContainer.parentElement.closest('[data-cmt]')) return;
-      var quote = sel.toString().trim();
-      if (quote.length < 2) return;
-      emit('comments:select', { el: range.startContainer.parentElement });
-      var rect = range.getBoundingClientRect();
-      selBtn = el('button', 'cmt-selbtn', 'Comment');
+    if (barBusy) return;   // someone is pressing the Comment bar; the tap can clear the selection first on iOS
+    if (composer) return;  // a comment is being written; leave it alone
+    removeSelBtn();
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    var range = sel.getRangeAt(0);
+    if (!rootEl().contains(range.commonAncestorContainer)) return;
+    if (range.startContainer.parentElement && range.startContainer.parentElement.closest(UI)) return;
+    var quote = sel.toString().trim();
+    if (quote.length < 2) return;
+    emit('comments:select', { el: range.startContainer.parentElement });
+    var rect = range.getBoundingClientRect();
+    var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end'), range: range.cloneRange() };
+    var touch = isTouch();
+    selBtn = el('button', touch ? 'cmt-selbar' : 'cmt-selbtn', touch ? 'Comment on selection' : 'Comment');
+    if (!touch) {
       selBtn.style.top = (window.scrollY + rect.bottom + 6) + 'px';
       selBtn.style.left = (window.scrollX + rect.left) + 'px';
-      var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end') };
-      selBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
-      selBtn.addEventListener('click', function (e) { e.stopPropagation(); openComposer(saved, rect); });
-      document.body.appendChild(selBtn);
-    }, 1);
+    } else {
+      // The phone's own Copy / Share menu sits next to the selection, so the
+      // button goes at the bottom of the screen, and the toggle gets out of the way.
+      document.documentElement.classList.add('cmt-selecting');
+    }
+    var btn = selBtn, opened = false;
+    function open(e) {
+      e.stopPropagation();
+      if (e.cancelable) e.preventDefault();
+      if (opened) return;
+      opened = true; barBusy = false;
+      openComposer(saved, rect);
+    }
+    btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    btn.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      barBusy = true;
+      setTimeout(function () { barBusy = false; }, 1500); // never stay stuck if the press is cancelled
+    });
+    btn.addEventListener('pointercancel', function () { barBusy = false; });
+    // Open on click, not pointerup: the sheet appears under the finger, and a
+    // click that follows pointerup would land on its Cancel button.
+    btn.addEventListener('click', open);
+    document.body.appendChild(btn);
   }
+  // Where a selection boundary falls in the page's text. A boundary can be an
+  // element (offset = child index) as well as a text node, so find the first
+  // indexed text at or after it.
+  function offsetOf(ix, container, offset) {
+    var i, seg;
+    if (container.nodeType === 3) {
+      for (i = 0; i < ix.map.length; i++) {
+        if (ix.map[i].node === container) return ix.map[i].start + Math.min(offset, container.nodeValue.length);
+      }
+    }
+    var r = document.createRange();
+    try { r.setStart(container, offset); } catch (e) { return -1; }
+    r.collapse(true);
+    for (i = 0; i < ix.map.length; i++) {
+      seg = ix.map[i];
+      if (r.comparePoint(seg.node, 0) >= 0) return seg.start;
+    }
+    return ix.full.length;
+  }
+  // Up to 32 characters either side of the words, measured from where the
+  // words really start and end (leading and trailing spaces are not part of the quote).
   function ctx(range, n, which) {
     try {
       var ix = buildIndex(rootEl());
-      var node = which === 'start' ? range.startContainer : range.endContainer;
-      var off = which === 'start' ? range.startOffset : range.endOffset;
-      var seg = ix.map.find(function (s) { return s.node === node; });
-      var g = seg ? seg.start + off : ix.full.indexOf(range.toString());
-      if (g < 0) return '';
-      return n < 0 ? ix.full.slice(Math.max(0, g + n), g) : ix.full.slice(g, g + n);
+      var s0 = offsetOf(ix, range.startContainer, range.startOffset);
+      var e0 = offsetOf(ix, range.endContainer, range.endOffset);
+      if (s0 < 0 || e0 <= s0) return '';
+      var raw = ix.full.slice(s0, e0);
+      s0 += raw.length - raw.replace(/^\s+/, '').length;
+      e0 -= raw.length - raw.replace(/\s+$/, '').length;
+      return n < 0 ? ix.full.slice(Math.max(0, s0 + n), s0) : ix.full.slice(e0, e0 + n);
     } catch (e) { return ''; }
   }
-  function removeSelBtn() { if (selBtn) { selBtn.remove(); selBtn = null; } }
-  function removeComposer() { if (composer) { composer.remove(); composer = null; } }
+  function removeSelBtn() {
+    if (selBtn) { selBtn.remove(); selBtn = null; }
+    document.documentElement.classList.remove('cmt-selecting');
+  }
+  function clearPending() {
+    document.querySelectorAll('mark.cmt-pending').forEach(function (m) {
+      var par = m.parentNode; if (!par) return;
+      while (m.firstChild) par.insertBefore(m.firstChild, m);
+      par.removeChild(m); par.normalize();
+    });
+  }
+  // Wrap the selected words in a mark that outlives the native selection.
+  function wrapPending(range) {
+    var sc = range.startContainer, so = range.startOffset, ec = range.endContainer, eo = range.endOffset;
+    var nodes = [], root = range.commonAncestorContainer;
+    if (root.nodeType === 3) nodes.push(root);
+    else {
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function (n) {
+          if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          if (n.parentElement && n.parentElement.closest(UI)) return NodeFilter.FILTER_REJECT;
+          return range.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+      });
+      var n; while ((n = w.nextNode())) nodes.push(n);
+    }
+    nodes.forEach(function (node) {
+      var a = node === sc ? so : 0, b = node === ec ? eo : node.nodeValue.length;
+      if (b <= a) return;
+      var r = document.createRange();
+      try { r.setStart(node, a); r.setEnd(node, b); } catch (e) { return; }
+      var m = document.createElement('mark'); m.className = 'cmt-pending'; m.setAttribute('data-cmt', 'pending');
+      try { r.surroundContents(m); } catch (e) { /* crosses a boundary; skip this piece */ }
+    });
+  }
+  function removeComposer() {
+    clearPending();
+    if (composer) { composer.remove(); composer = null; }
+    if (sheetKeys) { document.removeEventListener('keydown', sheetKeys); sheetKeys = null; }
+    if (vvHandler && window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', vvHandler);
+      window.visualViewport.removeEventListener('scroll', vvHandler);
+    }
+    vvHandler = null;
+  }
+  var vvHandler = null, sheetKeys = null;
+
+
+  // Phones: a short sheet in two steps. Name first (skipped when it is saved),
+  // then the comment, with the selected words kept visible above it.
+  function openSheet(saved) {
+    composer = el('div', 'cmt-composer cmt-sheet cmt-compact');
+    composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a comment');
+    var sheet = composer, vv = window.visualViewport, who = savedName();
+
+    var live = el('div', 'cmt-live'); live.setAttribute('aria-live', 'polite');
+
+    // step 1: the name
+    var s1 = el('div', 'cmt-step');
+    var top = el('div', 'cmt-top');
+    var q1 = el('label', '', "What's your name?"); q1.setAttribute('for', 'cmt-name');
+    var cancel1 = el('button', 'cmt-link', 'Cancel'); cancel1.type = 'button'; cancel1.addEventListener('click', removeComposer);
+    top.appendChild(q1); top.appendChild(cancel1);
+    var line = el('div', 'cmt-nameline');
+    var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name'; nameIn.enterKeyHint = 'next';
+    var next = el('button', 'cmt-btn', 'Next'); next.type = 'button';
+    line.appendChild(nameIn); line.appendChild(next);
+    s1.appendChild(top); s1.appendChild(line);
+
+    // step 2: the comment
+    var s2 = el('div', 'cmt-step');
+    var quote = saved.pin
+      ? 'Pin on image: ' + imageLabel(saved.pin)
+      : '“' + saved.quote.slice(0, 70).trim() + (saved.quote.length > 70 ? '…' : '') + '”';
+    var prev = el('div', 'cmt-q', quote);
+    var ta = el('textarea'); ta.rows = 2; ta.setAttribute('aria-label', 'Your comment'); ta.id = 'cmt-new'; ta.enterKeyHint = 'done';
+    var row = el('div', 'cmt-row');
+    var whoEl = el('div', 'cmt-who');
+    var whoName = document.createElement('span'); whoName.setAttribute('data-cmt', 'ui');
+    var change = el('button', 'cmt-link', 'Change'); change.type = 'button';
+    whoEl.appendChild(document.createTextNode('as ')); whoEl.appendChild(whoName); whoEl.appendChild(change);
+    var btns = el('div', 'cmt-btns');
+    var cancel2 = el('button', 'cmt-cancel', 'Cancel'); cancel2.type = 'button'; cancel2.addEventListener('click', removeComposer);
+    var post = el('button', 'cmt-btn', 'Comment'); post.type = 'button';
+    btns.appendChild(cancel2); btns.appendChild(post);
+    row.appendChild(whoEl); row.appendChild(btns);
+    s2.appendChild(prev); s2.appendChild(ta); s2.appendChild(row);
+
+    function focusIn(node) { try { node.focus({ preventScroll: true }); } catch (e) { node.focus(); } }
+    // Keep the highlighted words in the part of the screen the sheet and keyboard leave free.
+    function insetTop() {
+      var node = document.elementFromPoint(Math.round(window.innerWidth / 2), 4), inset = 8;
+      while (node && node !== document.documentElement) {
+        var pos = getComputedStyle(node).position;
+        if (pos === 'fixed' || pos === 'sticky') { inset = Math.max(inset, node.getBoundingClientRect().bottom + 8); break; }
+        node = node.parentElement;
+      }
+      return inset;
+    }
+    function reveal() {
+      if (!sheet.isConnected) return;
+      var mark = document.querySelector('mark.cmt-pending'); if (!mark) return;
+      var r = mark.getBoundingClientRect();
+      var visBottom = Math.min(sheet.getBoundingClientRect().top, vv ? vv.offsetTop + vv.height : window.innerHeight) - 8;
+      var visTop = insetTop();
+      if (r.top >= visTop && r.bottom <= visBottom) return;
+      window.scrollBy(0, Math.round((r.top + r.height / 2) - (visTop + visBottom) / 2));
+    }
+    var raf = 0;
+    vvHandler = function () {
+      if (!vv || !sheet.isConnected) return;
+      sheet.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + 'px';
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(reveal);
+    };
+    if (vv) { vv.addEventListener('resize', vvHandler); vv.addEventListener('scroll', vvHandler); }
+
+    function show(step) {
+      s1.hidden = step !== 1; s2.hidden = step !== 2;
+      if (step === 1) { nameIn.value = who; live.textContent = 'Step 1 of 2: your name'; focusIn(nameIn); }
+      else { whoName.textContent = who; live.textContent = 'Step 2 of 2: your comment'; focusIn(ta); }
+      vvHandler && vvHandler();
+      setTimeout(reveal, 50);
+    }
+    function goNext() {
+      var v = nameIn.value.trim();
+      if (!v) { nameIn.classList.add('cmt-invalid'); focusIn(nameIn); return; }
+      who = v; saveName(v); show(2);
+    }
+    next.addEventListener('click', goNext);
+    nameIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); goNext(); } });
+    nameIn.addEventListener('input', function () { nameIn.classList.remove('cmt-invalid'); });
+    change.addEventListener('click', function () { show(1); });
+    post.addEventListener('click', function () {
+      var v = ta.value.trim();
+      if (!v) { focusIn(ta); return; }
+      var thread = {
+        id: uid(), pageId: COMMENTS_CONFIG.pageId, quote: saved.quote,
+        prefix: saved.prefix, suffix: saved.suffix, pin: saved.pin || undefined, author: who,
+        text: v, createdAt: Date.now(), resolved: false, replies: []
+      };
+      store.create(thread).then(function (created) {
+        emit('comments:created', { thread: created || thread });
+        removeComposer(); window.getSelection().removeAllRanges();
+        return refresh().then(function () { openPanel(); if (created && created.id) markActive(created.id); });
+      });
+    });
+    sheetKeys = function (e) { if (e.key === 'Escape' && composer === sheet) removeComposer(); };
+    document.addEventListener('keydown', sheetKeys);
+
+    composer.appendChild(live); composer.appendChild(s1); composer.appendChild(s2);
+    document.body.appendChild(composer);
+    if (saved.range) {
+      wrapPending(saved.range);
+      try { window.getSelection().removeAllRanges(); } catch (e) { /* ignore */ }
+    }
+    show(who ? 2 : 1);
+  }
 
   function openComposer(saved, rect) {
     removeSelBtn(); removeComposer();
+    if (isTouch()) { openSheet(saved); return; }
     composer = el('div', 'cmt-composer');
     composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
     composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
