@@ -31,7 +31,7 @@ const IMG = "data:image/svg+xml;utf8," + encodeURIComponent(
 const FIXTURE = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>fixture</title></head><body><main>
 <h1>Review a page</h1>
-<p id="p1">Select text on any page and say what you think of it. The comment stays attached to those words.</p>
+<p id="p1">Select text on any page and say what you think of it. The note stays attached to those words.</p>
 <p id="p2">Notice that page appears here, and the word think appears again: think twice about page layout.</p>
 <img id="im" src="${IMG}" alt="Grey box" width="240" height="120">
 <ul><li id="l1">First item with <b>bold words</b> in it</li><li id="l2">Second item, plain</li></ul>
@@ -99,7 +99,7 @@ async function comment(page, touch, sel, text, body, nth = 0) {
       await page.click('.cmt-sheet button.cmt-btn:text-is("Next")');
     }
     await page.fill("#cmt-new", body);
-    await page.click('.cmt-sheet button.cmt-btn:text-is("Comment")');
+    await page.click('.cmt-sheet button.cmt-btn:text-is("Add note")');
   } else {
     if (!(await page.inputValue("#cmt-name"))) await page.fill("#cmt-name", "Sam");
     await page.fill("#cmt-new", body);

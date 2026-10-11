@@ -15,6 +15,7 @@ An accessibility pass. Because the widget's source changed, this is a new versio
 - `scripts/check-a11y.mjs`, a browser check for keyboard use, announcements, contrast, target size, reduced motion, forced colours and zoom. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
 
 ### Changed
+- **Notes, not comments, on screen.** The button, panel, note box, announcements and errors now say Notes, Add a note and so on. A new `noun` option (`data-noun`) sets the word: `noun: "comment"` gives Comments and Add a comment again. File names, the API (`/api/comments`), events (`comments:*`) and settings (`COMMENTS_*`) are unchanged.
 - Escape closes the innermost thing first (reply box or comment box, then pin mode, then the panel), and focus returns to where it was. The comment box and the phone sheet keep Tab inside them while open.
 - The panel is a labelled region, and a modal dialog on phones with focus kept inside. The closed panel is hidden from Tab and screen readers, and the Comments button reports `aria-expanded`.
 - Comments are a list, each named by its words, and Reply, Resolve and Go to buttons say which comment they act on.

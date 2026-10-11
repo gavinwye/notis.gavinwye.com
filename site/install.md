@@ -1,6 +1,6 @@
 # Add Notis to a site
 
-Notis lets reviewers select text on a page, or drop a pin on an image, and leave a comment. Everyone who opens the page sees the same comments. Home: https://notis.gavinwye.com. Source: https://github.com/gavinwye/notis.gavinwye.com (MIT).
+Notis lets reviewers select text on a page, or drop a pin on an image, and leave a note. Everyone who opens the page sees the same notes. Home: https://notis.gavinwye.com. Source: https://github.com/gavinwye/notis.gavinwye.com (MIT).
 
 You are an AI agent adding Notis to the user's site. Follow these steps in order. Ask the user before step 5, and before anything that deploys to production.
 
@@ -9,7 +9,7 @@ You are an AI agent adding Notis to the user's site. Follow these steps in order
 Ask, or work out from the repo:
 
 - **Reviewers only (recommended).** Load it on preview builds or behind a password. This is what Notis is for.
-- **Everywhere.** Only if the user says so. Anyone who can load the page can comment, with no sign-in.
+- **Everywhere.** Only if the user says so. Anyone who can load the page can leave a note, with no sign-in.
 
 If the site has a preview or staging build, wire it there. If there's only production, say so and ask.
 
@@ -63,7 +63,7 @@ Before the closing `</body>` in the shared layout (one place, not every page):
 
 If it should only run on previews, put the tag behind the build or environment check the site already has. Don't invent a new one.
 
-## 4. Choose where comments are stored
+## 4. Choose where notes are stored
 
 Work out the host from the repo (a `netlify.toml`, a `wrangler.toml`, a Dockerfile, a plain server) and offer the matching row. If you can't tell, ask.
 
@@ -117,17 +117,17 @@ Never print, log or commit the token. If you can't set it yourself, tell the use
 
 Preview deploys need the function too, so check it's included in the build, not only production.
 
-## Where the comments end up
+## Where the notes end up
 
 They are kept on the user's own host: Netlify Blobs (store `COMMENTS_STORE`, default `comments`), their Cloudflare KV namespace, or the folder `COMMENTS_DIR` for Node. On Netlify, production and deploy previews share the store, so use a different `COMMENTS_STORE` for each site. Tell the user where they are when you report back. Anyone with the admin token can export them with `curl -H "Authorization: Bearer $COMMENTS_ADMIN_TOKEN" <site>/api/comments`.
 
 ## 6. Check it works
 
-1. Open the page, select a sentence, click Comment, add a name and a comment.
-2. Reload. The highlight and the comment should still be there.
+1. Open the page, select a sentence, click Add note, add a name and a note.
+2. Reload. The highlight and the note should still be there.
 3. For shared storage, `curl <site>/api/comments` returns JSON containing the comment.
    If something doesn't work, the user can report it at https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml. Give them the output of `NotisVersion` in the browser console and which host they chose.
-4. Open the page in a private window. The comment should be there too.
+4. Open the page in a private window. The note should be there too.
 
 Report back with what you changed, what you checked, and anything the user must do (for example, setting the token).
 
@@ -137,16 +137,17 @@ Set before the script, or as `data-*` attributes on the tag:
 
 | Option | Default | What it does |
 |---|---|---|
-| `apiBase` | `"/api"` | Where the API lives. `null` keeps comments in the browser only. |
-| `pageId` | the URL path | Pages with the same value share comments. |
-| `root` | `"body"` | CSS selector for the region people can comment on. |
+| `apiBase` | `"/api"` | Where the API lives. `null` keeps notes in the browser only. |
+| `pageId` | the URL path | Pages with the same value share notes. |
+| `root` | `"body"` | CSS selector for the region people can leave notes on. |
 | `dock` | `false` | Push the page over to make room for the panel. |
 | `pins` | `true` | Allow pins on images. |
+| `noun` | `"note"` | What things left on the page are called on screen. Set `"comment"` for Comments and Add a comment. |
 
-## Reading the comments
+## Reading the notes
 
 ```bash
 curl -s "<site>/api/comments?page=<pageId>"
 ```
 
-Each thread has `quote` (the words), `text` (the comment), `resolved`, and `replies`. A pinned thread has `pin` instead of a quote. To mark one done, `PATCH /api/comments/<id>` with `{"resolved": true}`.
+Each thread has `quote` (the words), `text` (the note), `resolved`, and `replies`. A pinned thread has `pin` instead of a quote. To mark one done, `PATCH /api/comments/<id>` with `{"resolved": true}`.

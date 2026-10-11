@@ -27,6 +27,8 @@
      dock      true to dock the panel beside the page, pushing content
                over instead of covering it              (default false)
      pins      true to let reviewers drop a pin on an image   (default true)
+     noun      what a thing left on the page is called        (default "note";
+               set "comment" for Comments / Add a comment)
      supabase  { url, anonKey } to use Supabase instead of the API
                (leave null to use apiBase; set apiBase null to fall back
                to browser-only localStorage)
@@ -68,7 +70,8 @@
     pageId: defaultPath,
     root: "body",
     dock: false,
-    pins: true
+    pins: true,
+    noun: "note"
   }, window.COMMENTS_CONFIG || {});
 
   if (dataAttr("data-api-base") != null) COMMENTS_CONFIG.apiBase = dataAttr("data-api-base");
@@ -76,6 +79,13 @@
   if (dataAttr("data-root") != null) COMMENTS_CONFIG.root = dataAttr("data-root");
   if (dataAttr("data-pins") != null) COMMENTS_CONFIG.pins = dataAttr("data-pins") !== "false";
   if (dataAttr("data-dock") != null) COMMENTS_CONFIG.dock = dataAttr("data-dock") !== "false";
+  if (dataAttr("data-noun") != null) COMMENTS_CONFIG.noun = dataAttr("data-noun");
+
+  // What the things people leave are called on screen: "note" by default.
+  // A site that prefers "comment" sets noun: "comment". The plural adds an s.
+  var NOUN = String(COMMENTS_CONFIG.noun || "").trim().toLowerCase() || "note";
+  var NOUNS = NOUN + "s";
+  function cap(w) { return w.charAt(0).toUpperCase() + w.slice(1); }
 
   /* ---------- storage adapters (async, Promise-based) ---------- */
   function LocalStore(pageId) {
@@ -369,7 +379,7 @@
       if (!r.width || !r.height) return;
       var b = el("button", "cmt-pin", String(n + 1));
       b.dataset.thread = t.id; if (t.resolved) b.setAttribute("data-resolved", "1");
-      b.setAttribute("aria-label", "Comment " + (n + 1) + " on " + imageLabel(t.pin));
+      b.setAttribute("aria-label", cap(NOUN) + " " + (n + 1) + " on " + imageLabel(t.pin));
       b.style.left = (window.scrollX + r.left + t.pin.x * r.width) + "px";
       b.style.top = (window.scrollY + r.top + t.pin.y * r.height) + "px";
       b.addEventListener("click", function (e) { e.stopPropagation(); openPanel(); focusThread(t.id); });
@@ -397,7 +407,7 @@
       imgs.forEach(function (im) {
         if (!im.hasAttribute("tabindex")) {
           im.setAttribute("tabindex", "0"); pinTabbed.push(im);
-          im.setAttribute("aria-description", "Pin a comment here. Arrow keys move the pin, Enter drops it.");
+          im.setAttribute("aria-description", "Pin a " + NOUN + " here. Arrow keys move the pin, Enter drops it.");
         }
       });
       if (imgs.length) { pinAt = { x: 0.5, y: 0.5 }; if (document.activeElement === pinBtn) announce("Pin mode on. Tab to an image, use the arrow keys to move the pin, then press Enter."); }
@@ -483,9 +493,9 @@
       if (!listEl) return;
       listEl.innerHTML = '';
       var li = el('li', 'cmt-empty');
-      inlineError(li, 'Could not load the comments.', function () { refresh(); });
+      inlineError(li, 'Could not load the ' + NOUNS + '.', function () { refresh(); });
       listEl.appendChild(li);
-      announce('Could not load the comments.');
+      announce('Could not load the ' + NOUNS + '.');
     });
   }
   // A short message with a Retry button, announced to screen readers (role=alert).
@@ -528,6 +538,12 @@
       // Keyboard focus is always a heavy ink ring (3:1 against yellow and white alike).
       '[data-cmt]:focus-visible{outline:3px solid #0b0c0c !important;outline-offset:2px}' +
       '[data-cmt][tabindex="-1"]:focus:not(:focus-visible){outline:0}' +
+      // Text fields: white, with a thin black border. Focus turns the bottom border into a thick
+      // yellow bar (padding gives the room back, so nothing shifts), and a transparent outline
+      // keeps a cue in forced-colours mode.
+      "input[data-cmt]:not([type=checkbox]),textarea[data-cmt]{background:#fff !important;border:2px solid #0b0c0c !important;box-shadow:none !important;box-sizing:border-box}" +
+      "input[data-cmt]:not([type=checkbox]):focus,textarea[data-cmt]:focus{border-bottom:8px solid #ffc726 !important;padding-bottom:2px !important;outline:3px solid transparent !important;outline-offset:-3px}" +
+      "input[data-cmt].cmt-invalid,textarea[data-cmt].cmt-invalid{border-color:#b3261e !important}" +
       'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #946b00;cursor:pointer;padding:0 1px}' +
       'mark.cmt-hl[data-count="2"]{background:#ffe9a0;border-bottom-width:3px}mark.cmt-hl[data-count="3"],mark.cmt-hl[data-count="4"],mark.cmt-hl[data-count="5"]{background:#ffdd73;border-bottom-width:4px}' +
       'mark.cmt-hl[data-resolved]{background:#eef0f2;border-bottom-color:#6b7478}' +
@@ -631,7 +647,7 @@
         '.cmt-panel,.cmt-composer{border:2px solid CanvasText}}';
     document.head.appendChild(css);
 
-    toggleBtn = el('button', 'cmt-toggle', 'Comments');
+    toggleBtn = el('button', 'cmt-toggle', cap(NOUNS));
     toggleBtn.setAttribute('data-cmt', 'toggle');
     toggleBtn.setAttribute('aria-expanded', 'false'); toggleBtn.setAttribute('aria-controls', 'cmt-panel');
     toggleBtn.addEventListener('click', function () { panel.classList.contains('cmt-open') ? closePanel() : openPanel({ focus: true }); });
@@ -645,8 +661,8 @@
     panel.setAttribute('aria-labelledby', 'cmt-title'); panel.tabIndex = -1; panel.setAttribute('inert', '');
     trapTab(panel, isCompact);
     var head = el('div', 'cmt-head');
-    var h2 = el('h2', '', 'Comments'); h2.id = 'cmt-title';
-    var close = el('button', 'cmt-close'); close.setAttribute('aria-label', 'Close comments'); close.title = 'Close';
+    var h2 = el('h2', '', cap(NOUNS)); h2.id = 'cmt-title';
+    var close = el('button', 'cmt-close'); close.setAttribute('aria-label', 'Close ' + NOUNS); close.title = 'Close';
     var svgNS = 'http://www.w3.org/2000/svg', icon = document.createElementNS(svgNS, 'svg');
     icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('width', '20'); icon.setAttribute('height', '20'); icon.setAttribute('aria-hidden', 'true'); icon.setAttribute('focusable', 'false');
     var xPath = document.createElementNS(svgNS, 'path');
@@ -663,10 +679,10 @@
     resolvedChk = el('input'); resolvedChk.type = 'checkbox'; resolvedChk.id = 'cmt-showres';
     resolvedChk.addEventListener('change', function () { showResolved = resolvedChk.checked; refresh(); });
     var lbl = el('label', '', 'Show resolved'); lbl.setAttribute('for', 'cmt-showres');
-    var selPanel = el('button', 'cmt-selpanel', 'Comment on selection'); selPanel.type = 'button';
+    var selPanel = el('button', 'cmt-selpanel', 'Add ' + NOUN + ' on selection'); selPanel.type = 'button';
     selPanel.addEventListener('click', function () { commentOnSelection(); });
     sub.appendChild(resolvedChk); sub.appendChild(lbl); sub.appendChild(selPanel);
-    listEl = el('ul', 'cmt-list'); listEl.setAttribute('role', 'list'); listEl.setAttribute('aria-label', 'Comments on this page');
+    listEl = el('ul', 'cmt-list'); listEl.setAttribute('role', 'list'); listEl.setAttribute('aria-label', cap(NOUNS) + ' on this page');
     var foot = el('div', 'cmt-foot');
     var closeBtn = el('button', 'cmt-btn cmt-footclose', 'Close');
     closeBtn.addEventListener('click', closePanel);
@@ -719,8 +735,8 @@
   var panelOpener = null, modalKeys = null;
   function summary() {
     var open = threads.filter(function (t) { return !t.resolved; }).length, n = threads.length;
-    if (!n) return 'No comments yet';
-    return n + (n === 1 ? ' comment, ' : ' comments, ') + open + ' unresolved';
+    if (!n) return 'No ' + NOUNS + ' yet';
+    return n + ' ' + (n === 1 ? NOUN : NOUNS) + ', ' + open + ' unresolved';
   }
   function openPanel(opts) {
     var was = panel.classList.contains('cmt-open');
@@ -750,7 +766,7 @@
   }
   function updateCount() {
     var n = threads.filter(function (t) { return !t.resolved; }).length;
-    toggleBtn.textContent = 'Comments' + (n ? ' (' + n + ')' : '');
+    toggleBtn.textContent = cap(NOUNS) + (n ? ' (' + n + ')' : '');
   }
 
   function threadLabel(t) {
@@ -762,7 +778,7 @@
     listEl.innerHTML = '';
     var visible = byPosition(threads.filter(function (t) { return showResolved || !t.resolved; }));
     if (!visible.length) {
-      listEl.appendChild(el('li', 'cmt-empty', (isTouch() ? 'No comments yet. Press and hold a word, drag to extend, then tap Comment.' : 'No comments yet. Select any text on the page to start one, then press Alt+Shift+C.') + (COMMENTS_CONFIG.pins ? ' You can also pin one to an image.' : '')));
+      listEl.appendChild(el('li', 'cmt-empty', (isTouch() ? 'No ' + NOUNS + ' yet. Press and hold a word, drag to extend, then tap the bar at the bottom.' : 'No ' + NOUNS + ' yet. Select any text on the page to start one, then press Alt+Shift+C.') + (COMMENTS_CONFIG.pins ? ' You can also pin one to an image.' : '')));
       return;
     }
     visible.forEach(function (t) {
@@ -772,14 +788,14 @@
       if (t.resolved) box.appendChild(el('span', 'cmt-state', 'Resolved'));
       var q = el('div', 'cmt-quote', t.pin ? label : '“' + t.quote + '”'); q.id = qid;
       box.appendChild(q);
-      if (!found[t.id]) box.appendChild(el('div', 'cmt-lost', t.pin ? 'This image is no longer on the page.' : 'This text has changed since the comment was left.'));
+      if (!found[t.id]) box.appendChild(el('div', 'cmt-lost', t.pin ? 'This image is no longer on the page.' : 'This text has changed since the ' + NOUN + ' was left.'));
       box.appendChild(msg(t.author, t.text, t.createdAt));
       (t.replies || []).forEach(function (r) { box.appendChild(msg(r.author, r.text, r.createdAt)); });
       var actions = el('div', 'cmt-actions');
-      var reBtn = el('button', '', 'Reply'); reBtn.type = 'button'; reBtn.setAttribute('aria-label', 'Reply to the comment on ' + label);
+      var reBtn = el('button', '', 'Reply'); reBtn.type = 'button'; reBtn.setAttribute('aria-label', 'Reply to the ' + NOUN + ' on ' + label);
       reBtn.addEventListener('click', function (e) { e.stopPropagation(); showReply(box, t.id); });
       var resBtn = el('button', '', t.resolved ? 'Reopen' : 'Resolve'); resBtn.type = 'button';
-      resBtn.setAttribute('aria-label', (t.resolved ? 'Reopen' : 'Resolve') + ' the comment on ' + label);
+      resBtn.setAttribute('aria-label', (t.resolved ? 'Reopen' : 'Resolve') + ' the ' + NOUN + ' on ' + label);
       function toggleResolved() {
         resBtn.disabled = true;
         store.setResolved(t.id, !t.resolved).then(function () {
@@ -792,7 +808,7 @@
           });
         }, function () {
           resBtn.disabled = false;
-          inlineError(box, 'Could not update the comment.', toggleResolved);
+          inlineError(box, 'Could not update the ' + NOUN + '.', toggleResolved);
         });
       }
       resBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleResolved(); });
@@ -942,10 +958,10 @@
     lastInfo = { info: info, at: Date.now() };
     emit('comments:select', { el: info.el });
     var rect = info.rect, saved = info.saved;
-    if (keySelect && !isTouch()) announce('Text selected. Press Alt+Shift+C to comment on it.');
+    if (keySelect && !isTouch()) announce('Text selected. Press Alt+Shift+C to add a ' + NOUN + ' on it.');
     keySelect = false;
     var touch = isTouch();
-    selBtn = el('button', touch ? 'cmt-selbar' : 'cmt-selbtn', touch ? 'Comment on selection' : 'Comment');
+    selBtn = el('button', touch ? 'cmt-selbar' : 'cmt-selbtn', touch ? 'Add a ' + NOUN + ' on selection' : 'Add ' + NOUN);
     if (!touch) {
       selBtn.style.top = (window.scrollY + rect.bottom + 6) + 'px';
       selBtn.style.left = (window.scrollX + rect.left) + 'px';
@@ -1059,11 +1075,11 @@
         openPanel();
         var id = created && created.id;
         if (id) { var box = markActive(id); if (box) { focusEl(box); box.scrollIntoView({ block: 'nearest' }); } }
-        announce('Comment added');
+        announce(cap(NOUN) + ' added');
       });
     }, function () {
       btn.disabled = false; btn.removeAttribute('aria-busy');
-      inlineError(host, 'Could not post your comment.', function () { postThread(thread, btn, host); });
+      inlineError(host, 'Could not post your ' + NOUN + '.', function () { postThread(thread, btn, host); });
     });
   }
   function removeComposer() {
@@ -1083,7 +1099,7 @@
   // then the comment, with the selected words kept visible above it.
   function openSheet(saved) {
     composer = el('div', 'cmt-composer cmt-sheet cmt-compact');
-    composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a comment');
+    composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a ' + NOUN);
     var sheet = composer, vv = window.visualViewport, who = savedName();
 
     var live = el('div', 'cmt-live'); live.setAttribute('aria-live', 'polite');
@@ -1106,7 +1122,7 @@
       ? 'Pin on image: ' + imageLabel(saved.pin)
       : '“' + saved.quote.slice(0, 70).trim() + (saved.quote.length > 70 ? '…' : '') + '”';
     var prev = el('div', 'cmt-q', quote);
-    var ta = el('textarea'); ta.rows = 2; ta.setAttribute('aria-label', 'Your comment'); ta.id = 'cmt-new'; ta.enterKeyHint = 'done';
+    var ta = el('textarea'); ta.rows = 2; ta.setAttribute('aria-label', 'Your ' + NOUN); ta.id = 'cmt-new'; ta.enterKeyHint = 'done';
     var row = el('div', 'cmt-row');
     var whoEl = el('div', 'cmt-who');
     var whoName = document.createElement('span'); whoName.setAttribute('data-cmt', 'ui');
@@ -1114,7 +1130,7 @@
     whoEl.appendChild(document.createTextNode('as ')); whoEl.appendChild(whoName); whoEl.appendChild(change);
     var btns = el('div', 'cmt-btns');
     var cancel2 = el('button', 'cmt-cancel', 'Cancel'); cancel2.type = 'button'; cancel2.addEventListener('click', cancelComposer);
-    var post = el('button', 'cmt-btn', 'Comment'); post.type = 'button';
+    var post = el('button', 'cmt-btn', 'Add ' + NOUN); post.type = 'button';
     btns.appendChild(cancel2); btns.appendChild(post);
     row.appendChild(whoEl); row.appendChild(btns);
     s2.appendChild(prev); s2.appendChild(ta); s2.appendChild(row);
@@ -1150,7 +1166,7 @@
     function show(step) {
       s1.hidden = step !== 1; s2.hidden = step !== 2;
       if (step === 1) { nameIn.value = who; live.textContent = 'Step 1 of 2: your name'; focusIn(nameIn); }
-      else { whoName.textContent = who; live.textContent = 'Step 2 of 2: your comment'; focusIn(ta); }
+      else { whoName.textContent = who; live.textContent = 'Step 2 of 2: your ' + NOUN; focusIn(ta); }
       vvHandler && vvHandler();
       setTimeout(reveal, 50);
     }
@@ -1189,17 +1205,17 @@
     composerOpener = (from && from !== document.body && !(from.closest && from.closest('[data-cmt="ui"].cmt-selbtn, .cmt-selbtn, .cmt-selbar'))) ? from : null;
     removeSelBtn(); removeComposer();
     if (isTouch()) { openSheet(saved); return; }
-    composer = el('div', 'cmt-composer'); composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a comment'); trapTab(composer);
+    composer = el('div', 'cmt-composer'); composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a ' + NOUN); trapTab(composer);
     composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
     composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
     var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
     nameIn.value = savedName();
     var nameLab = el('label', 'cmt-label', 'Your name'); nameLab.setAttribute('for', 'cmt-name');
     var ta = el('textarea'); ta.id = 'cmt-new';
-    var lab = el('label', 'cmt-label', 'Your comment'); lab.setAttribute('for', 'cmt-new');
+    var lab = el('label', 'cmt-label', 'Your ' + NOUN); lab.setAttribute('for', 'cmt-new');
     var row = el('div', 'cmt-row');
     var cancel = el('button', 'cmt-cancel', 'Cancel'); cancel.type = 'button'; cancel.addEventListener('click', cancelComposer);
-    var post = el('button', 'cmt-btn', 'Comment');
+    var post = el('button', 'cmt-btn', 'Add ' + NOUN);
     post.addEventListener('click', function () {
       var v = ta.value.trim();
       var who = nameIn.value.trim();
