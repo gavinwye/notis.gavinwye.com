@@ -387,6 +387,12 @@
       'html.cmt-pinning img{cursor:crosshair !important;outline:3px dashed #ffc726;outline-offset:3px}' +
       '.cmt-pinhint{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9004;background:#0b0c0c;color:#fff;padding:10px 16px;font-size:15px;font-weight:600}' +
       '.cmt-head .cmt-pinbtn{background:#0b0c0c;color:#fff;border:0;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}.cmt-head .cmt-pinbtn.cmt-on{background:#fff;color:#0b0c0c;box-shadow:inset 0 0 0 2px #0b0c0c}' +
+      '.cmt-selbar{position:fixed;left:12px;right:12px;bottom:12px;z-index:9004;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:14px 16px;font:700 17px/1.2 "Figtree",arial,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}' +
+      '.cmt-selbar:active{background:#ffd94d}' +
+      'html.cmt-selecting .cmt-toggle{display:none}' +
+      '.cmt-composer.cmt-sheet{position:fixed;top:auto;left:0;right:0;bottom:0;width:auto;max-height:85vh;overflow:auto;border-width:2px 0 0;padding:14px 16px 18px;box-shadow:0 -4px 16px rgba(0,0,0,.25);z-index:9005}' +
+      '.cmt-composer.cmt-sheet input,.cmt-composer.cmt-sheet textarea{font-size:16px}' +
+      '.cmt-composer.cmt-sheet .cmt-btn{padding:10px 18px;font-size:16px}.cmt-composer.cmt-sheet .cmt-cancel{padding:10px 12px;font-size:16px}' +
       '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer}';
     document.head.appendChild(css);
 
@@ -414,8 +420,12 @@
     panel.appendChild(head); panel.appendChild(sub); panel.appendChild(listEl);
     document.body.appendChild(panel);
 
-    document.addEventListener('mouseup', onSelect);
-    document.addEventListener('keyup', onSelect);
+    document.addEventListener('mouseup', function () { mouseIsDown = false; scheduleSelect(1); });
+    document.addEventListener('keyup', function () { scheduleSelect(1); });
+    // A long-press on a phone fires neither of those, only selectionchange.
+    // While a mouse button is held the selection is still being dragged, so wait.
+    document.addEventListener('mousedown', function () { mouseIsDown = true; }, true);
+    document.addEventListener('selectionchange', function () { if (!mouseIsDown) scheduleSelect(150); });
   }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; e.setAttribute && e.setAttribute('data-cmt', e.getAttribute('data-cmt') || 'ui'); return e; }
 
@@ -437,7 +447,7 @@
     listEl.innerHTML = '';
     var visible = byPosition(threads.filter(function (t) { return showResolved || !t.resolved; }));
     if (!visible.length) {
-      listEl.appendChild(el('div', 'cmt-empty', COMMENTS_CONFIG.pins ? 'No comments yet. Select any text on the page to start one, or pin one to an image.' : 'No comments yet. Select any text on the page to start one.'));
+      listEl.appendChild(el('div', 'cmt-empty', (isTouch() ? 'No comments yet. Press and hold a word, drag to extend, then tap Comment.' : 'No comments yet. Select any text on the page to start one.') + (COMMENTS_CONFIG.pins ? ' You can also pin one to an image.' : '')));
       return;
     }
     visible.forEach(function (t) {
@@ -515,26 +525,52 @@
   }
 
   /* ---------- selection -> new comment ---------- */
+  var selTimer = null, barBusy = false, mouseIsDown = false;
+  function isTouch() { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } }
+  function scheduleSelect(delay) { clearTimeout(selTimer); selTimer = setTimeout(onSelect, delay); }
   function onSelect() {
-    setTimeout(function () {
-      removeSelBtn();
-      var sel = window.getSelection();
-      if (!sel || sel.isCollapsed) return;
-      var range = sel.getRangeAt(0);
-      if (!rootEl().contains(range.commonAncestorContainer)) return;
-      if (range.startContainer.parentElement && range.startContainer.parentElement.closest('[data-cmt]')) return;
-      var quote = sel.toString().trim();
-      if (quote.length < 2) return;
-      emit('comments:select', { el: range.startContainer.parentElement });
-      var rect = range.getBoundingClientRect();
-      selBtn = el('button', 'cmt-selbtn', 'Comment');
+    if (barBusy) return;   // someone is pressing the Comment bar; the tap can clear the selection first on iOS
+    if (composer) return;  // a comment is being written; leave it alone
+    removeSelBtn();
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    var range = sel.getRangeAt(0);
+    if (!rootEl().contains(range.commonAncestorContainer)) return;
+    if (range.startContainer.parentElement && range.startContainer.parentElement.closest('[data-cmt]')) return;
+    var quote = sel.toString().trim();
+    if (quote.length < 2) return;
+    emit('comments:select', { el: range.startContainer.parentElement });
+    var rect = range.getBoundingClientRect();
+    var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end') };
+    var touch = isTouch();
+    selBtn = el('button', touch ? 'cmt-selbar' : 'cmt-selbtn', touch ? 'Comment on selection' : 'Comment');
+    if (!touch) {
       selBtn.style.top = (window.scrollY + rect.bottom + 6) + 'px';
       selBtn.style.left = (window.scrollX + rect.left) + 'px';
-      var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end') };
-      selBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
-      selBtn.addEventListener('click', function (e) { e.stopPropagation(); openComposer(saved, rect); });
-      document.body.appendChild(selBtn);
-    }, 1);
+    } else {
+      // The phone's own Copy / Share menu sits next to the selection, so the
+      // button goes at the bottom of the screen, and the toggle gets out of the way.
+      document.documentElement.classList.add('cmt-selecting');
+    }
+    var btn = selBtn, opened = false;
+    function open(e) {
+      e.stopPropagation();
+      if (e.cancelable) e.preventDefault();
+      if (opened) return;
+      opened = true; barBusy = false;
+      openComposer(saved, rect);
+    }
+    btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    btn.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      barBusy = true;
+      setTimeout(function () { barBusy = false; }, 1500); // never stay stuck if the press is cancelled
+    });
+    btn.addEventListener('pointercancel', function () { barBusy = false; });
+    // Open on click, not pointerup: the sheet appears under the finger, and a
+    // click that follows pointerup would land on its Cancel button.
+    btn.addEventListener('click', open);
+    document.body.appendChild(btn);
   }
   function ctx(range, n, which) {
     try {
@@ -547,14 +583,37 @@
       return n < 0 ? ix.full.slice(Math.max(0, g + n), g) : ix.full.slice(g, g + n);
     } catch (e) { return ''; }
   }
-  function removeSelBtn() { if (selBtn) { selBtn.remove(); selBtn = null; } }
-  function removeComposer() { if (composer) { composer.remove(); composer = null; } }
+  function removeSelBtn() {
+    if (selBtn) { selBtn.remove(); selBtn = null; }
+    document.documentElement.classList.remove('cmt-selecting');
+  }
+  function removeComposer() {
+    if (composer) { composer.remove(); composer = null; }
+    if (vvHandler && window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', vvHandler);
+      window.visualViewport.removeEventListener('scroll', vvHandler);
+    }
+    vvHandler = null;
+  }
+  var vvHandler = null;
 
   function openComposer(saved, rect) {
     removeSelBtn(); removeComposer();
     composer = el('div', 'cmt-composer');
-    composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
-    composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
+    if (isTouch()) {
+      composer.classList.add('cmt-sheet');
+      composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a comment');
+      var vv = window.visualViewport, sheet = composer;
+      // Keep the sheet above the on-screen keyboard.
+      vvHandler = function () {
+        if (!vv || !sheet.isConnected) return;
+        sheet.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + 'px';
+      };
+      if (vv) { vv.addEventListener('resize', vvHandler); vv.addEventListener('scroll', vvHandler); }
+    } else {
+      composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+      composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
+    }
     var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
     nameIn.value = savedName();
     var nameLab = el('label', 'cmt-label', 'Your name'); nameLab.setAttribute('for', 'cmt-name');
@@ -583,6 +642,7 @@
     row.appendChild(cancel); row.appendChild(post);
     composer.appendChild(nameLab); composer.appendChild(nameIn); composer.appendChild(lab); composer.appendChild(ta); composer.appendChild(row);
     document.body.appendChild(composer); (nameIn.value ? ta : nameIn).focus();
+    if (vvHandler) vvHandler();
   }
   document.addEventListener('mousedown', function (e) {
     if (composer && !composer.contains(e.target)) removeComposer();
