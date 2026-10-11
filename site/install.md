@@ -15,13 +15,35 @@ If the site has a preview or staging build, wire it there. If there's only produ
 
 ## 2. Get the script
 
-Save a copy in the folder the site serves static files from (`public/`, `static/`, the site root, or similar) so it's served at `/comments.js`:
+Find the current version and its hash at https://notis.gavinwye.com/version.json:
 
-```bash
-curl -fsSL https://notis.gavinwye.com/comments.js -o <static dir>/comments.js
+```json
+{ "version": "0.2.0",
+  "script": "https://notis.gavinwye.com/v0.2.0/comments.js",
+  "integrity": "sha384-...",
+  "snippet": "https://notis.gavinwye.com/v0.2.0/snippet.html" }
 ```
 
-Commit the file. Don't load it from a CDN.
+Everything under `/v<version>/` is immutable: the same address always returns the same bytes. The unversioned `/comments.js` changes when a new version is released, so don't point a site at it.
+
+**If the site has a folder for static files (`public/`, `static/`, the site root), save a copy there**, so it's served at `/comments.js`. Use the versioned file and check it against the hash:
+
+```bash
+curl -fsSL https://notis.gavinwye.com/v0.2.0/comments.js -o <static dir>/comments.js
+curl -fsSL https://notis.gavinwye.com/v0.2.0/comments.js.sri
+# the second command's output should equal:
+openssl dgst -sha384 -binary <static dir>/comments.js | openssl base64 -A
+```
+
+Commit the file, and say in your report which version you saved.
+
+**If you're adding the script from the web instead** (a page you can edit but that has no static folder, a CMS, a hosted page builder), use the versioned URL with its integrity hash. Take the tag from `snippet`, never the unversioned URL:
+
+```html
+<script src="https://notis.gavinwye.com/v0.2.0/comments.js" integrity="sha384-..." crossorigin="anonymous" defer></script>
+```
+
+With this form, that tag is the script tag, so skip the `<script src="/comments.js">` line in step 3. Everything else is the same.
 
 ## 3. Add one line to the page template
 

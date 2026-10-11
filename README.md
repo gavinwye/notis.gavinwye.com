@@ -52,6 +52,19 @@ Before `</body>`:
 
 Out of the box it keeps one thread list per URL path and stores them through `/api/comments`.
 
+### Pin a version
+
+The script at `https://notis.gavinwye.com/comments.js` changes when a new version is released. For anything you don't want to change under you, use the versioned address, which never changes, and add its integrity hash so the browser refuses a file that doesn't match:
+
+```html
+<script src="https://notis.gavinwye.com/v0.2.0/comments.js"
+        integrity="sha384-..." crossorigin="anonymous" defer></script>
+```
+
+The ready-made tag, with the real hash, is at `https://notis.gavinwye.com/v0.2.0/snippet.html`. `https://notis.gavinwye.com/version.json` lists the current version, its hash and the server files. You can also keep your own copy: `curl -O https://notis.gavinwye.com/v0.2.0/comments.js`.
+
+It's also prepared for npm as `@gavinwye/notis`: the widget is `@gavinwye/notis/comments.js`, and the servers are under `@gavinwye/notis/server/…`. (Not published yet.)
+
 ### Options
 
 Set them with a global before the script, or with `data-*` attributes on the tag.
@@ -227,7 +240,10 @@ Worth knowing before you rely on it.
 public/comments.js            the widget
 server/core.mjs               the API, with no host in it
 server/{netlify,cloudflare,node}.mjs   one adapter per host
-scripts/build.mjs             builds single-file versions into site/server/
+scripts/build.mjs             builds the site's generated files (single-file servers,
+                              versioned /v<version>/ copies, hashes) and the npm dist/
+releases/                     archived releases, republished unchanged (see RELEASING.md)
+CHANGELOG.md, RELEASING.md    what changed, and how to release
 test/                         `npm test`
 site/                         the website (notis.gavinwye.com)
 docs/PLAN.md                  how we're publishing it
