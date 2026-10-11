@@ -1,6 +1,8 @@
-I build a lot of small prototypes and pages, and I need people to tell me what's wrong with them.
+I build a lot of small prototypes and pages, and I need feedback on them: comments and notes from the people looking at them.
 
-Most of that feedback arrives by email, and that's where it falls apart. A comment in an email isn't attached to anything. "The intro feels long" could mean the first paragraph or the whole section, and I have to guess. With one reviewer that's a small annoyance. With five it gets hard to work with. Each person writes their own message, nobody can see what the others said, two people comment on the same sentence without knowing, and I end up stitching it all together by hand.
+That feedback arrives by email, in Slack, or out loud in a meeting, and that's where it falls apart. A comment in an email isn't attached to anything. "The intro feels long" could mean the first paragraph or the whole section, and I have to guess. A comment made in a meeting is gone unless someone wrote it down.
+
+With one reviewer that's a small annoyance. With five it gets hard to work with. Each person writes their own message, nobody can see what the others said, and two people comment on the same sentence without knowing. The comments overlap, repeat each other or disagree, and I end up stitching it all together by hand.
 
 The comments need to sit on the words they're about, in one list that everyone can see.
 
