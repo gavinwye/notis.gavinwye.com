@@ -2,6 +2,24 @@
 
 All notable changes to Notis. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-10-11
+
+Server fixes. The widget is unchanged apart from its version number. Because the server files are part of a release, this is a new version: 0.3.0 is archived and doesn't change.
+
+### Security
+- **The full export needs the admin token.** `GET /api/comments` with no `?page=` returns every page's notes, so it now requires `Authorization: Bearer <COMMENTS_ADMIN_TOKEN>` and answers `403` without it. Reading one page with `?page=<pageId>` is unchanged, so the widget keeps working. ([#69](https://github.com/gavinwye/notis.gavinwye.com/pull/69))
+- **Write ceilings and a duplicate check.** At most `COMMENTS_MAX_THREADS_PER_PAGE` threads per page (default 500) and `COMMENTS_MAX_REPLIES_PER_THREAD` replies per thread (default 1000), answered with `429`. The same author sending the same text on the same words, or the same image spot, again within `COMMENTS_DUPLICATE_WINDOW_MS` (default 60 seconds, `0` turns it off) gets `409`. CORS is documented as browser policy, not authentication, with a pointer to host-level rate limiting. ([#73](https://github.com/gavinwye/notis.gavinwye.com/pull/73))
+
+### Fixed
+- **Two replies at the same moment no longer lose one.** Writes to a thread are queued, so replies, resolve and reopen can't overwrite each other, and the Node adapter gives every file write its own temporary name. ([#70](https://github.com/gavinwye/notis.gavinwye.com/pull/70))
+- **A malformed `%` escape in the path is a `400`**, not a server error. ([#69](https://github.com/gavinwye/notis.gavinwye.com/pull/69))
+- **The Cloudflare adapter builds its handler once**, not for every request, so the write queue and the ceilings apply there too. (Found while combining these fixes. [#76](https://github.com/gavinwye/notis.gavinwye.com/issues/76))
+- The duplicate check compares the words or image spot as well as the text, so the same remark on two different sentences is allowed. (Found while combining these fixes.)
+
+### Notes
+- The write queue lives inside one running copy of the server. Where a host runs several copies at once (Netlify functions, Workers) two requests on different copies can still race, and the ceilings are a soft limit.
+- The installation snippets now read one page (`?page=`) instead of the whole list. ([#72](https://github.com/gavinwye/notis.gavinwye.com/pull/72))
+
 ## [0.3.0] - 2026-10-11
 
 An accessibility pass, notes wording and Barlow type. Because the widget's source changed, this is a new version: 0.2.0 is archived and doesn't change.
@@ -63,6 +81,7 @@ First version in its own repository, taken from the copies in use on several sit
 ### Changed
 - Removed project-specific names: neutral event, class and storage-key prefixes (`comments:*`, `cmt-*`), and the licence holder is Gavin Wye. ([#9](https://github.com/gavinwye/notis.gavinwye.com/pull/9))
 
-[0.3.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.2.0...HEAD
+[0.3.1]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/gavinwye/notis.gavinwye.com/releases/tag/v0.1.0
