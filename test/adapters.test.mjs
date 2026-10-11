@@ -55,3 +55,16 @@ test("netlify adapter moves an older single-blob store to one blob per thread", 
   assert.equal(blobs.m.has("threads"), false);
   assert.equal(blobs.m.has("t/abc123def"), true);
 });
+
+test("cloudflare worker: one handler for every request, so concurrent replies are not lost", async () => {
+  const { default: worker } = await import("../server/cloudflare.mjs");
+  const env = { COMMENTS: fakeKV(), COMMENTS_ADMIN_TOKEN: "tok" };
+  const send = async (method, path, body) => {
+    const r = await worker.fetch(new Request("http://x" + path, { method, headers: { "content-type": "application/json" }, body: body && JSON.stringify(body) }), env);
+    return r.json();
+  };
+  const t = await send("POST", "/api/comments", { pageId: "/p", author: "Sam", text: "root" });
+  await Promise.all(Array.from({ length: 12 }, (_, i) => send("POST", `/api/comments/${t.id}/replies`, { author: "Jo", text: `r${i}` })));
+  const [saved] = await send("GET", "/api/comments?page=/p");
+  assert.equal(saved.replies.length, 12);
+});

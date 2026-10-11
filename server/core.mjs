@@ -37,7 +37,8 @@ export function createHandler({ storage, config = {} }) {
   };
   const maxThreadsPerPage = positiveInt(config.maxThreadsPerPage, 500);
   const maxRepliesPerThread = positiveInt(config.maxRepliesPerThread, LIMITS.replies);
-  const duplicateWindowMs = positiveInt(config.duplicateWindowMs, 60_000);
+  // 0 turns the duplicate check off; anything else that isn't a positive whole number keeps the default.
+  const duplicateWindowMs = String(config.duplicateWindowMs).trim() === "0" ? 0 : positiveInt(config.duplicateWindowMs, 60_000);
   const threadWrites = new Map();
 
   // Serialize read-modify-write operations for each thread. Without this,
@@ -139,7 +140,10 @@ export function createHandler({ storage, config = {} }) {
           const author = clip(b.author, LIMITS.author).trim() || "Anonymous";
           const existing = (await storage.list()).filter((thread) => thread.pageId === pageId);
           if (existing.length >= maxThreadsPerPage) return json({ error: "too many threads on this page" }, 429);
-          const duplicate = existing.some((thread) => thread.author === author && thread.text === text &&
+          // The same person saying the same thing about the same words (or the same spot on an image)
+          // within the window is a double submit. The same remark on different words is not.
+          const duplicate = duplicateWindowMs > 0 && existing.some((thread) => thread.author === author && thread.text === text &&
+            thread.quote === clip(b.quote, LIMITS.quote) && JSON.stringify(thread.pin || null) === JSON.stringify(pin || null) &&
             Date.now() - Number(thread.createdAt || 0) < duplicateWindowMs);
           if (duplicate) return json({ error: "duplicate comment" }, 409);
 
@@ -169,7 +173,7 @@ export function createHandler({ storage, config = {} }) {
           if (!Array.isArray(t.replies)) t.replies = [];
           if (t.replies.length >= maxRepliesPerThread) return json({ error: "too many replies" }, 429);
           const author = clip((parsed.value || {}).author, LIMITS.author).trim() || "Anonymous";
-          const duplicate = t.replies.some((reply) => reply.author === author && reply.text === text &&
+          const duplicate = duplicateWindowMs > 0 && t.replies.some((reply) => reply.author === author && reply.text === text &&
             Date.now() - Number(reply.createdAt || 0) < duplicateWindowMs);
           if (duplicate) return json({ error: "duplicate reply" }, 409);
           const reply = {

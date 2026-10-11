@@ -38,9 +38,13 @@ export function storageFor(kv) {
   };
 }
 
+// Built once per isolate. The per-thread write queue lives inside the handler, so making a new
+// handler for every request (as this file used to) would give each request its own empty queue.
+let handle;
+
 export default {
   fetch(req, env) {
-    const handle = createHandler({
+    handle ??= createHandler({
       storage: storageFor(env.COMMENTS),
       config: {
         adminToken: env.COMMENTS_ADMIN_TOKEN,
