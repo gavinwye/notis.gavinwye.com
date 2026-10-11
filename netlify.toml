@@ -7,3 +7,8 @@
 
 # The function declares its own routes via `export const config.path`,
 # so /api/comments is handled without an explicit redirect.
+
+# Deploy previews are off by default to save Netlify credits. Review locally with
+# `preview <dir>`; share with `preview --share <dir>` (one manual draft deploy).
+[context.deploy-preview]
+  ignore = "exit 0"
