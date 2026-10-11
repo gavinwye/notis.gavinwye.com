@@ -1,6 +1,14 @@
-I build a lot of small prototypes and pages, and I need people to tell me what's wrong with them. Email doesn't work well for that. "The second paragraph feels off" means I have to work out which paragraph, then what was meant.
+I build a lot of small prototypes and pages, and I need feedback on them: comments and notes from the people looking at them.
 
-So I made a small tool called Notis, which is Swedish for a short note. A reviewer selects the words they mean and leaves a comment on them. The comment stays attached to those words, and everyone who opens the page sees the same list.
+That feedback arrives by email, in Slack, or out loud in a meeting, and that's where it falls apart. A comment in an email isn't attached to anything. "The intro feels long" could mean the first paragraph or the whole section, and I have to guess. A comment made in a meeting is gone unless someone wrote it down.
+
+With one reviewer that's a small annoyance. With five it gets hard to work with. Each person writes their own message, nobody can see what the others said, and two people comment on the same sentence without knowing. The comments overlap, repeat each other or disagree, and I end up stitching it all together by hand.
+
+The comments need to sit on the words they're about, in one list that everyone can see.
+
+If you've used comments in Google Docs, you know the shape. You select some words, say what you think, and the comment stays with those words. Everyone sees the same list, and you resolve each one when it's dealt with.
+
+Notis is that for web pages. It's a small tool called Notis, which is Swedish for a short note. A reviewer selects the words they mean and leaves a comment on them. The comment stays attached to those words, and everyone who opens the page sees the same list.
 
 It's open source and live at [notis.gavinwye.com](https://notis.gavinwye.com), where you can try it. You can also ask an agent to add it to your site: the site has a one-line prompt for that.
 
@@ -13,6 +21,20 @@ It's open source and live at [notis.gavinwye.com](https://notis.gavinwye.com), w
 - Nobody needs an account. People type a name once and it's remembered.
 
 It's one script on the page and one small function behind it. There's no database to set up.
+
+## How it compares with Google Docs
+
+The part you'd recognise is the same: comments on the words, threads, replies and resolve.
+
+The differences are about where it works.
+
+- It works on a real web page, the one you built, rather than on a document someone has to paste it into.
+- Reviewers don't need an account or access to a file. They open the link and type a name.
+- Your comments are stored where you choose (your Netlify, Cloudflare or Node server), so you hold the data.
+- The comments are data, so a script or an agent can read them and act on them.
+- You can pin a comment to a particular spot on an image.
+
+It's much smaller than Google Docs. It's for comments and nothing else: no editing, no suggested changes, and no way to tag a person yet.
 
 ## Where it started
 
