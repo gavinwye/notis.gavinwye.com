@@ -74,7 +74,24 @@
   .cols div { background:var(--tint); border:1px solid var(--line); padding:16px 18px; }
   .cols h3 { margin:0 0 6px; font-size:18px; }
   .cols p { margin:0; font-size:16px; color:var(--muted); }
-  @media (max-width:560px) { header { padding:10px 0; } header .wrap { flex-direction:column; align-items:flex-start; gap:6px; } nav { flex-wrap:nowrap; overflow-x:auto; max-width:100%; justify-content:flex-start; padding-bottom:4px; } }
+  .menu-toggle { display:none; align-items:center; gap:8px; font:inherit; font-size:16px; font-weight:700; background:#fff; color:#0b0c0c; border:2px solid #0b0c0c; padding:0 12px; min-height:44px; cursor:pointer; }
+  .menu-toggle:hover { background:var(--markline); }
+  .menu-toggle:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  .menu-toggle .cross { display:none; }
+  .menu-toggle[aria-expanded="true"] .bars { display:none; }
+  .menu-toggle[aria-expanded="true"] .cross { display:inline; }
+  @media (max-width:560px) {
+    header { padding:8px 0; }
+    header .wrap { flex-wrap:wrap; align-items:center; }
+    /* With JavaScript, the links tuck into a menu. Without it they stay visible. */
+    .js .menu-toggle { display:inline-flex; }
+    .js nav { display:none; flex:0 0 calc(100% + 40px); flex-direction:column; gap:0; margin:8px -20px 0; border-top:2px solid #0b0c0c; background:var(--paper); }
+    .js nav.open { display:flex; }
+    .js nav a { display:block; padding:14px 20px; font-size:18px; border-bottom:1px solid var(--line); text-decoration:none; }
+    .js nav a:last-child { border-bottom:0; }
+    .js nav a:hover, .js nav a:focus-visible { background:var(--mark); }
+    nav { flex-wrap:wrap; overflow:visible; justify-content:flex-start; }
+  }
   section[id] { scroll-margin-top:96px; }
   @media (max-width:560px) { section[id] { scroll-margin-top:100px; } }
   footer { padding:28px 0 80px; border-top:1px solid var(--line); color:var(--muted); font-size:15px; }
@@ -84,7 +101,11 @@
 <header>
   <div class="wrap">
     <a class="brand" href="/"><i aria-hidden="true"></i>Notis</a>
-    <nav aria-label="On this page">
+    <button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="site-nav" hidden>
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="bars" d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="3" stroke-linecap="square" fill="none"/><path class="cross" d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="3" stroke-linecap="square" fill="none"/></svg>
+      <span class="menu-label">Menu</span>
+    </button>
+    <nav aria-label="On this page" id="site-nav">
       <a href="#how-it-works">How it works</a>
       <a href="#add-it-to-a-page">Add it to a page</a>
       <a href="#what-it-doesnt-do">What it doesn't do</a>
@@ -168,6 +189,24 @@
   fetch("/version.json").then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
     if (v && v.version) document.getElementById("site-version").textContent = v.version;
   }).catch(function () { /* keep the fallback text */ });
+</script>
+<script>
+  (function () {
+    document.documentElement.classList.add("js");
+    var btn = document.getElementById("menu-toggle"), nav = document.getElementById("site-nav");
+    btn.hidden = false;
+    function setOpen(open) {
+      nav.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      btn.querySelector(".menu-label").textContent = open ? "Close" : "Menu";
+    }
+    btn.addEventListener("click", function () { setOpen(btn.getAttribute("aria-expanded") !== "true"); });
+    nav.addEventListener("click", function (e) { if (e.target.closest("a")) setOpen(false); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && btn.getAttribute("aria-expanded") === "true") { setOpen(false); btn.focus(); }
+    });
+    window.matchMedia("(min-width:561px)").addEventListener("change", function (e) { if (e.matches) setOpen(false); });
+  })();
 </script>
 <script>
   document.getElementById("copy-prompt").addEventListener("click", function () {
