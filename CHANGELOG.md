@@ -2,11 +2,11 @@
 
 All notable changes to Notis. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers follow [Semantic Versioning](https://semver.org/).
 
-## [0.2.0] - unreleased
-
-Set the date here when it's tagged (see RELEASING.md).
+## [0.2.0] - 2026-10-11
 
 ### Added
+- Phones and tablets: selecting text with a long-press now works. A "Comment on selection" bar sits at the bottom of the screen, and the comment box is a compact two-step sheet (name, then comment) that keeps your selected words highlighted above the keyboard. ([#47](https://github.com/gavinwye/notis.gavinwye.com/pull/47))
+- A close icon in the panel header and a Close button along the bottom; Escape closes the panel. ([#47](https://github.com/gavinwye/notis.gavinwye.com/pull/47))
 - Pins: choose **Pin on image** in the panel and click a point on an image. The pin stays at that point when the image is resized. ([#10](https://github.com/gavinwye/notis.gavinwye.com/pull/10))
 - A name field in the comment box, asked for first, in place of the browser's pop-up. ([#10](https://github.com/gavinwye/notis.gavinwye.com/pull/10))
 - The panel lists comments in the order they appear on the page, and clicking one scrolls the page to its words or pin. ([#10](https://github.com/gavinwye/notis.gavinwye.com/pull/10))
@@ -22,6 +22,8 @@ Set the date here when it's tagged (see RELEASING.md).
 - Renamed to **Notis**, at notis.gavinwye.com.
 
 ### Fixed
+- Comments that overlap or sit inside each other now all get a highlight, and the panel lists them in page order. Before, the earlier comment in an overlap lost its highlight. Overlapping spots look stronger, and tapping one cycles through its comments. ([#47](https://github.com/gavinwye/notis.gavinwye.com/pull/47))
+- On a phone the panel is a full-width sheet with 16px fields, so Safari no longer zooms in, and nothing runs off the edge. ([#47](https://github.com/gavinwye/notis.gavinwye.com/pull/47))
 - Comments whose text spans paragraphs or list items are found again, so they highlight and the sidebar can scroll to them. ([#10](https://github.com/gavinwye/notis.gavinwye.com/pull/10))
 
 ## [0.1.0] - 2026-10-10
