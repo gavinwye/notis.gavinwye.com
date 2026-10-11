@@ -2,6 +2,10 @@
 /v*/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Fonts never change under the same name.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # The current, unversioned files change when a new version is released.
 /comments.js
   Cache-Control: public, max-age=300, must-revalidate

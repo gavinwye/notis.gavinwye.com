@@ -30,7 +30,7 @@ The newest copy in use, with the other sites' project-specific settings left out
 ## Decisions for Gavin before it goes public
 
 1. **Name.** Decided: Notis (Swedish for a short note). Technical names (`comments.js`, `/api/comments`, `comments:*` events, `COMMENTS_*` settings) stay as they are, because they say what the thing does and other sites already use them.
-2. **Font.** The panel uses Figtree. Fine as a default, but should be a setting.
+2. **Font.** Decided: Barlow and Barlow Semi Condensed, the family gavinwye.com uses, served from this site's own files. The widget takes the page's font and falls back to the system font; `--notis-font` overrides it.
 
 ## Steps
 

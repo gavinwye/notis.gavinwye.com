@@ -23,10 +23,22 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="/fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/barlow-semi-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  /* Barlow and Barlow Semi Condensed, the same self-hosted latin subsets gavinwye.com uses. */
+  @font-face { font-family:'Barlow Semi Condensed'; font-style:normal; font-weight:600; font-display:swap; src:url('/fonts/barlow-semi-condensed-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family:'Barlow Semi Condensed'; font-style:normal; font-weight:700; font-display:swap; src:url('/fonts/barlow-semi-condensed-latin-700-normal.woff2') format('woff2'); }
+  @font-face { font-family:'Barlow'; font-style:normal; font-weight:400; font-display:swap; src:url('/fonts/barlow-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family:'Barlow'; font-style:normal; font-weight:500; font-display:swap; src:url('/fonts/barlow-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family:'Barlow'; font-style:normal; font-weight:600; font-display:swap; src:url('/fonts/barlow-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family:'Barlow'; font-style:italic; font-weight:400; font-display:swap; src:url('/fonts/barlow-latin-400-italic.woff2') format('woff2'); }
+  /* Metric-adjusted fallbacks, so the swap moves the page as little as possible. */
+  @font-face { font-family:'Barlow Fallback'; src:local('Arial'); size-adjust:94%; ascent-override:106%; descent-override:21%; line-gap-override:0%; }
+  @font-face { font-family:'Barlow Semi Condensed Fallback'; src:local('Arial Narrow'), local('Arial'); size-adjust:96%; ascent-override:104%; descent-override:21%; line-gap-override:0%; }
   :root {
+    --display:'Barlow Semi Condensed','Barlow Semi Condensed Fallback','Arial Narrow',sans-serif;
+    --text:'Barlow','Barlow Fallback',system-ui,sans-serif;
     --ink:#0b0c0c; --muted:#4b5559; --line:#d8dde0; --paper:#fff; --tint:#f6f7f8;
     --mark:#fff3c4; --markline:#ffc726; --link:#1d5fa3;
   }
@@ -35,46 +47,47 @@
   }
   * { box-sizing:border-box; }
   html { -webkit-text-size-adjust:100%; }
-  body { margin:0; font-family:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--paper); line-height:1.6; font-size:18px; }
+  body { margin:0; font-family:var(--text); color:var(--ink); background:var(--paper); line-height:1.55; font-size:19px; }
+  b, strong { font-weight:600; }
   a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--markline); text-decoration-thickness:2px; text-underline-offset:3px; }
   a:hover { background:var(--mark); }
   .wrap { max-width:720px; margin:0 auto; padding:0 20px; }
   header { position:sticky; top:0; z-index:100; background:var(--paper); padding:16px 0; border-bottom:1px solid var(--line); }
   header .wrap { display:flex; justify-content:space-between; align-items:center; gap:16px; }
-  .brand { font-weight:800; font-size:20px; text-decoration:none; color:var(--ink); display:flex; align-items:center; gap:10px; }
+  .brand { font-family:var(--display); font-weight:700; font-size:24px; letter-spacing:-.01em; text-decoration:none; color:var(--ink); display:flex; align-items:center; gap:10px; }
   .brand i { width:24px; height:24px; background:var(--markline); display:inline-block; }
   nav { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px 16px; }
-  nav a { white-space:nowrap; font-size:16px; font-weight:600; }
+  nav a { white-space:nowrap; font-size:17px; font-weight:600; }
   nav a:hover { text-decoration:underline; }
   .hero { padding:64px 0 40px; }
-  h1 { font-size:clamp(34px,6vw,52px); line-height:1.1; letter-spacing:-.02em; font-weight:800; margin:0 0 20px; isolation:isolate; }
+  h1 { font-family:var(--display); font-size:clamp(40px,7.5vw,68px); line-height:1.18; letter-spacing:0; font-weight:700; margin:0 0 24px; isolation:isolate; text-wrap:balance; }
   /* Behind the text: an inline highlight on the second line would otherwise paint over the descenders of the line above. */
   h1 mark { position:relative; z-index:-1; background:var(--mark); color:inherit; border-bottom:3px solid var(--markline); padding:0 .08em; }
-  .lede { font-size:21px; color:var(--muted); margin:0 0 28px; max-width:34em; }
-  .try { background:var(--tint); border:1px solid var(--line); border-left:4px solid var(--markline); padding:16px 20px; font-size:17px; margin:0 0 8px; }
-  .try b { font-weight:700; }
-  .small { font-size:15px; color:var(--muted); margin:8px 0 0; }
+  .lede { font-size:22px; color:var(--muted); margin:0 0 28px; max-width:34em; }
+  .try { background:var(--tint); border:1px solid var(--line); border-left:4px solid var(--markline); padding:16px 20px; font-size:18px; margin:0 0 8px; }
+  .try b { font-weight:600; }
+  .small { font-size:16px; color:var(--muted); margin:8px 0 0; }
   section { padding:36px 0; border-top:1px solid var(--line); }
-  h2 { font-size:26px; line-height:1.2; margin:0 0 14px; letter-spacing:-.01em; }
+  h2 { font-family:var(--display); font-weight:700; font-size:34px; line-height:1.08; margin:0 0 14px; letter-spacing:-.01em; }
   p { margin:0 0 16px; }
   ol.steps { padding-left:0; list-style:none; counter-reset:s; margin:0; }
   ol.steps li { counter-increment:s; padding-left:44px; position:relative; margin:0 0 14px; }
-  ol.steps li::before { content:counter(s); position:absolute; left:0; top:2px; width:30px; height:30px; background:var(--ink); color:var(--paper); font-weight:700; font-size:15px; display:grid; place-items:center; }
+  ol.steps li::before { content:counter(s); position:absolute; left:0; top:2px; width:30px; height:30px; background:var(--ink); color:var(--paper); font-weight:600; font-size:16px; display:grid; place-items:center; }
   pre { background:#0f1416; color:#e8eef0; padding:16px 18px; overflow-x:auto; font-size:15px; line-height:1.5; margin:0 0 16px; }
   code { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.9em; }
   p code, li code { background:var(--tint); border:1px solid var(--line); padding:1px 6px; }
-  h3 { font-size:20px; margin:28px 0 8px; }
-  .copy { font:inherit; font-size:16px; font-weight:700; background:var(--markline); color:#0b0c0c; border:2px solid #0b0c0c; padding:8px 14px; cursor:pointer; }
+  h3 { font-size:22px; font-weight:600; line-height:1.25; margin:28px 0 8px; }
+  .copy { font:inherit; font-size:17px; font-weight:600; background:var(--markline); color:#0b0c0c; border:2px solid #0b0c0c; padding:8px 14px; cursor:pointer; }
   .copy:hover { background:#ffd94d; }
   .copy:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
   ul.plain { padding-left:20px; margin:0 0 16px; }
   ul.plain li { margin:0 0 8px; }
   .cols { display:grid; gap:20px; grid-template-columns:1fr 1fr; }
-  @media (max-width:640px) { .cols { grid-template-columns:1fr; } .hero { padding-top:40px; } body { font-size:17px; } }
+  @media (max-width:640px) { .cols { grid-template-columns:1fr; } .hero { padding-top:40px; } body { font-size:18px; } h1 { font-size:clamp(38px,11vw,48px); line-height:1.16; } h2 { font-size:30px; } }
   .cols div { background:var(--tint); border:1px solid var(--line); padding:16px 18px; }
-  .cols h3 { margin:0 0 6px; font-size:18px; }
-  .cols p { margin:0; font-size:16px; color:var(--muted); }
-  .menu-toggle { display:none; align-items:center; gap:8px; font:inherit; font-size:16px; font-weight:700; background:#fff; color:#0b0c0c; border:2px solid #0b0c0c; padding:0 12px; min-height:44px; cursor:pointer; }
+  .cols h3 { margin:0 0 6px; font-size:20px; }
+  .cols p { margin:0; font-size:17px; color:var(--muted); }
+  .menu-toggle { display:none; align-items:center; gap:8px; font:inherit; font-size:17px; font-weight:600; background:#fff; color:#0b0c0c; border:2px solid #0b0c0c; padding:0 12px; min-height:44px; cursor:pointer; }
   .menu-toggle:hover { background:var(--markline); }
   .menu-toggle:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
   .menu-toggle .cross { display:none; }

@@ -103,6 +103,14 @@ Set them with a global before the script, or with `data-*` attributes on the tag
 | `dock` | `false` | Push the page over to make room for the panel, rather than covering it. |
 | `supabase` | `null` | `{ url, anonKey }` to use Supabase instead of the Netlify function. |
 
+### Fonts and colours
+
+The widget loads no font of its own. It sets its text in `--notis-font` if your page defines it, then in Barlow if your page has loaded it, then in the system font:
+
+```css
+:root { --notis-font: "Inter", system-ui, sans-serif; }
+```
+
 ### Events
 
 The widget fires events on `document`, so a page can react to a note, for example by highlighting the column the text sits in.
@@ -291,3 +299,9 @@ docs/PLAN.md                  how we're publishing it
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
+
+### Fonts
+
+The Notis site is set in [Barlow](https://github.com/jpt/barlow) and Barlow Semi Condensed by Jeremy Tribby, the same family gavinwye.com uses. They're licensed under the SIL Open Font License 1.1 (see `site/fonts/OFL.txt`) and served from this site's own files, so visiting it makes no request to Google Fonts.
+
+The example wireframe (`site/demo-form.svg`) is drawn in [Inter](https://github.com/rsms/inter) by The Inter Project Authors, embedded in the image file, under the same licence (`site/fonts/Inter-OFL.txt`). It stands in for someone else's page, so it doesn't use the site's own type.
