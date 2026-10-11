@@ -40,7 +40,7 @@ async function roundTrip(storage) {
   assert.equal(list[0].resolved, true);
   const gone = await call("DELETE", `/api/comments/${t.id}`, undefined, { authorization: "Bearer tok" });
   assert.equal(gone.removed, 1);
-  assert.equal((await call("GET", "/api/comments")).length, 0);
+  assert.equal((await call("GET", "/api/comments", undefined, { authorization: "Bearer tok" })).length, 0);
 }
 
 test("netlify blobs adapter", async () => { await roundTrip(netlifyStorage(fakeBlobs())); });

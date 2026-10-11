@@ -93,14 +93,20 @@ export function createHandler({ storage, config = {} }) {
 
     const url = new URL(req.url);
     if (url.pathname !== basePath && !url.pathname.startsWith(basePath + "/")) return json({ error: "not found" }, 404);
-    const seg = url.pathname.slice(basePath.length).split("/").filter(Boolean).map(decodeURIComponent);
+    let seg;
+    try {
+      seg = url.pathname.slice(basePath.length).split("/").filter(Boolean).map(decodeURIComponent);
+    } catch {
+      return json({ error: "invalid path encoding" }, 400);
+    }
     if (seg[0] !== undefined && !ID.test(seg[0])) return json({ error: "thread not found" }, 404);
 
     try {
       // ---- GET ?page= ----
       if (req.method === "GET" && seg.length === 0) {
-        const all = await storage.list();
         const page = url.searchParams.get("page");
+        if (!page && !isAdmin(req)) return json({ error: "admin token required to list all pages" }, 403);
+        const all = await storage.list();
         const out = (page ? all.filter((t) => t.pageId === page) : all)
           .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
         return json(out);
