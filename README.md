@@ -73,11 +73,12 @@ Out of the box it keeps one thread list per URL path and stores them through `/a
 The script at `https://notis.gavinwye.com/comments.js` changes when a new version is released. For anything you don't want to change under you, use the versioned address, which never changes, and add its integrity hash so the browser refuses a file that doesn't match:
 
 ```html
-<script src="https://notis.gavinwye.com/v0.2.0/comments.js"
-        integrity="sha384-..." crossorigin="anonymous" defer></script>
+<script src="https://notis.gavinwye.com/v0.3.0/comments.js"
+        integrity="sha384-zBFcKQGAPWicStoMgHXnnyyqshoLQQG6d6go9c5XQ1c9/rsXEowFE0twoWjJStln"
+        crossorigin="anonymous" defer></script>
 ```
 
-The ready-made tag, with the real hash, is at `https://notis.gavinwye.com/v0.2.0/snippet.html`. `https://notis.gavinwye.com/version.json` lists the current version, its hash and the server files. You can also keep your own copy: `curl -O https://notis.gavinwye.com/v0.2.0/comments.js`.
+The ready-made tag, with the real hash, is at `https://notis.gavinwye.com/v0.3.0/snippet.html`. `https://notis.gavinwye.com/version.json` lists the current version, its hash and the server files. You can also keep your own copy: `curl -O https://notis.gavinwye.com/v0.3.0/comments.js`.
 
 It's also prepared for npm as `@gavinwye/notis`: the widget is `@gavinwye/notis/comments.js`, and the servers are under `@gavinwye/notis/server/…`. (Not published yet.)
 
