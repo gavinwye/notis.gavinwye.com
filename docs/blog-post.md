@@ -1,4 +1,8 @@
-I build a lot of small prototypes and pages, and I need people to tell me what's wrong with them. Email doesn't work well for that. "The second paragraph feels off" means I have to work out which paragraph, then what was meant.
+I build a lot of small prototypes and pages, and I need people to tell me what's wrong with them.
+
+Most of that feedback arrives by email, and that's where it falls apart. A comment in an email isn't attached to anything. "The intro feels long" could mean the first paragraph or the whole section, and I have to guess. With one reviewer that's a small annoyance. With five it gets hard to work with. Each person writes their own message, nobody can see what the others said, two people comment on the same sentence without knowing, and I end up stitching it all together by hand.
+
+The comments need to sit on the words they're about, in one list that everyone can see.
 
 If you've used comments in Google Docs, you know the shape. You select some words, say what you think, and the comment stays with those words. Everyone sees the same list, and you resolve each one when it's dealt with.
 
