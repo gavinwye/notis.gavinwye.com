@@ -393,7 +393,11 @@
     setPinMode(false);
     openComposer({ quote: "", prefix: "", suffix: "", pin: pin }, { bottom: e.clientY, left: e.clientX });
   }, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && pinMode) setPinMode(false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (pinMode) setPinMode(false);
+    else if (!composer && panel && panel.classList.contains('cmt-open')) closePanel();
+  });
   window.addEventListener("resize", function () { renderPins(); });
   window.addEventListener("load", function () { renderPins(); });
 
@@ -457,6 +461,7 @@
       '.cmt-pin.cmt-flash{animation:cmtPin 1.2s ease}@keyframes cmtPin{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}' +
       'html.cmt-pinning img{cursor:crosshair !important;outline:3px dashed #ffc726;outline-offset:3px}' +
       '.cmt-pinhint{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9004;background:#0b0c0c;color:#fff;padding:10px 16px;font-size:15px;font-weight:600}' +
+      '.cmt-head .cmt-close{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;padding:0;background:#fff;color:#0b0c0c;border:2px solid #0b0c0c;cursor:pointer}.cmt-head .cmt-close:hover{background:#0b0c0c;color:#fff}.cmt-head .cmt-close:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}' +
       '.cmt-head .cmt-pinbtn{background:#0b0c0c;color:#fff;border:0;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}.cmt-head .cmt-pinbtn.cmt-on{background:#fff;color:#0b0c0c;box-shadow:inset 0 0 0 2px #0b0c0c}' +
       '.cmt-selbar{position:fixed;left:12px;right:12px;bottom:12px;z-index:9004;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:14px 16px;font:700 17px/1.2 "Figtree",arial,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}' +
       '.cmt-selbar:active{background:#ffd94d}' +
@@ -467,7 +472,7 @@
         '.cmt-panel *{min-width:0;box-sizing:border-box}' +
         '.cmt-head{padding:6px 8px 6px 16px;gap:8px}' +
         '.cmt-head h2{flex:1;min-width:0}' +
-        '.cmt-head button{min-width:44px;min-height:44px}' +
+        '.cmt-head button{min-width:44px;min-height:44px}.cmt-head .cmt-close{width:44px;height:44px}' +
         '.cmt-head .cmt-pinbtn{padding:0 12px;font-size:15px}' +
         '.cmt-sub{padding:0 8px 0 16px;font-size:16px;min-height:44px}' +
         '.cmt-sub input{width:22px;height:22px;margin:0 10px 0 0;flex:none}' +
@@ -513,7 +518,13 @@
 
     panel = el('aside', 'cmt-panel'); panel.setAttribute('data-cmt', 'panel'); panel.setAttribute('aria-label', 'Comments');
     var head = el('div', 'cmt-head');
-    var h2 = el('h2', '', 'Comments'); var close = el('button', '', '×'); close.setAttribute('aria-label', 'Close comments');
+    var h2 = el('h2', '', 'Comments');
+    var close = el('button', 'cmt-close'); close.setAttribute('aria-label', 'Close comments'); close.title = 'Close';
+    var svgNS = 'http://www.w3.org/2000/svg', icon = document.createElementNS(svgNS, 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('width', '20'); icon.setAttribute('height', '20'); icon.setAttribute('aria-hidden', 'true'); icon.setAttribute('focusable', 'false');
+    var xPath = document.createElementNS(svgNS, 'path');
+    xPath.setAttribute('d', 'M5 5l14 14M19 5L5 19'); xPath.setAttribute('stroke', 'currentColor'); xPath.setAttribute('stroke-width', '3'); xPath.setAttribute('stroke-linecap', 'square'); xPath.setAttribute('fill', 'none');
+    icon.appendChild(xPath); close.appendChild(icon);
     close.addEventListener('click', closePanel); head.appendChild(h2);
     if (COMMENTS_CONFIG.pins) {
       pinBtn = el('button', 'cmt-pinbtn', 'Pin on image'); pinBtn.setAttribute('aria-pressed', 'false');
