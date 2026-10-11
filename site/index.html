@@ -45,8 +45,9 @@
   nav a { white-space:nowrap; font-size:16px; font-weight:600; }
   nav a:hover { text-decoration:underline; }
   .hero { padding:64px 0 40px; }
-  h1 { font-size:clamp(34px,6vw,52px); line-height:1.1; letter-spacing:-.02em; font-weight:800; margin:0 0 20px; }
-  h1 mark { background:var(--mark); color:inherit; border-bottom:3px solid var(--markline); padding:0 .08em; }
+  h1 { font-size:clamp(34px,6vw,52px); line-height:1.1; letter-spacing:-.02em; font-weight:800; margin:0 0 20px; isolation:isolate; }
+  /* Behind the text: an inline highlight on the second line would otherwise paint over the descenders of the line above. */
+  h1 mark { position:relative; z-index:-1; background:var(--mark); color:inherit; border-bottom:3px solid var(--markline); padding:0 .08em; }
   .lede { font-size:21px; color:var(--muted); margin:0 0 28px; max-width:34em; }
   .try { background:var(--tint); border:1px solid var(--line); border-left:4px solid var(--markline); padding:16px 20px; font-size:17px; margin:0 0 8px; }
   .try b { font-weight:700; }
