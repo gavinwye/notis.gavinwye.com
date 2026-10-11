@@ -4,22 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Notis</title>
-<meta name="description" content="Select text on any page and leave a comment on those exact words. One script, one small function, no accounts.">
+<meta name="description" content="Select text on any page and leave a note on those exact words. One script, one small function, no accounts.">
 <link rel="canonical" href="https://notis.gavinwye.com/">
 <meta property="og:site_name" content="Notis">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://notis.gavinwye.com/">
-<meta property="og:title" content="Notis: comment on the exact words">
-<meta property="og:description" content="Select text on any page and leave a comment on those exact words. One script, one small function, no accounts.">
+<meta property="og:title" content="Notis: leave a note on the exact words">
+<meta property="og:description" content="Select text on any page and leave a note on those exact words. One script, one small function, no accounts.">
 <meta property="og:image" content="https://notis.gavinwye.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Notis. Comment on the exact words. A comment box shows a note attached to the highlighted words feels off.">
+<meta property="og:image:alt" content="Notis. Leave a note on the exact words. A note box shows a note attached to the highlighted words feels long.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Notis: comment on the exact words">
-<meta name="twitter:description" content="Select text on any page and leave a comment on those exact words. One script, one small function, no accounts.">
+<meta name="twitter:title" content="Notis: leave a note on the exact words">
+<meta name="twitter:description" content="Select text on any page and leave a note on those exact words. One script, one small function, no accounts.">
 <meta name="twitter:image" content="https://notis.gavinwye.com/og.png">
-<meta name="twitter:image:alt" content="Notis. Comment on the exact words. A comment box shows a note attached to the highlighted words feels off.">
+<meta name="twitter:image:alt" content="Notis. Leave a note on the exact words. A note box shows a note attached to the highlighted words feels long.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23ffc726'/><path d='M7 9h18v11H15l-5 4v-4H7z' fill='%230b0c0c'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -92,16 +92,16 @@
 
 <main class="wrap">
   <div class="hero">
-    <h1>Review a page by commenting on <mark>the exact words</mark>.</h1>
-    <p class="lede">Select text on any page and say what you think of it. The comment stays attached to those words, and everyone who opens the page sees it.</p>
+    <h1>Review a page by leaving a note on <mark>the exact words</mark>.</h1>
+    <p class="lede">Select text on any page and leave a note on it. The note stays attached to those words, and everyone who opens the page sees it.</p>
     <p class="try"><b>Try it on this page.</b> Select any sentence here, then click the <b>Comment</b> button that appears.</p>
-    <p class="small">On this page, comments are saved in your browser only. On your own site they're shared.</p>
+    <p class="small">On this page, notes are saved in your browser only. On your own site they're shared.</p>
   </div>
 
   <section id="why-it-exists">
     <h2>Why it exists</h2>
-    <p>Reviewing a prototype by email gets you vague notes: "the second paragraph feels off". It's slow to work out which paragraph, and what was meant.</p>
-    <p>With this, the reviewer selects the words they mean and writes what's wrong. You get the words and the comment together, in one list, without anyone needing an account.</p>
+    <p>Feedback by email, in Slack or in a meeting isn't attached to anything. "The intro feels long" could mean one paragraph or the whole section, and with several reviewers the comments overlap, repeat each other or disagree.</p>
+    <p>With Notis, the reviewer selects the words they mean and leaves a note on them. You get the words and the note together, in one list, without anyone needing an account.</p>
     <p>Notis is Swedish for a short note.</p>
     <p>It started as a way to get quick reactions to early prototypes, from people who had no time for a tool.</p>
   </section>
@@ -109,14 +109,14 @@
   <section id="how-it-works">
     <h2>How it works</h2>
     <ol class="steps">
-      <li><b>Select.</b> A reviewer highlights text and writes a comment.</li>
-      <li><b>Discuss.</b> A side panel lists every thread. People reply, and resolve what's done.</li>
-      <li><b>Fix.</b> Open comments are plain JSON. You, a script or an AI assistant can read them, change the page, and mark them resolved.</li>
+      <li><b>Select.</b> A reviewer highlights text and leaves a note.</li>
+      <li><b>Discuss.</b> A side panel lists every note in page order. People reply, and resolve what's done.</li>
+      <li><b>Fix.</b> Open notes are plain JSON. You, a script or an AI assistant can read them, change the page, and mark them resolved.</li>
     </ol>
   </section>
 
-  <section id="pin-a-comment-to-an-image">
-    <h2>Pin a comment to an image</h2>
+  <section id="pin-a-note-to-an-image">
+    <h2>Pin a note to an image</h2>
     <p>Some things you can't select. Open the panel, choose <b>Pin on image</b>, then click the spot you mean. The pin stays at that point, even when the image is resized.</p>
     <p><img src="demo-form.svg" alt="Wireframe of a parking permit application form" width="640" height="400" style="max-width:100%;height:auto;border:2px solid var(--ink);display:block"></p>
     <p class="small">Try it on the wireframe above. Pins are saved in your browser only.</p>
@@ -126,7 +126,7 @@
     <h2>Add it to a page</h2>
     <p>One line before <code>&lt;/body&gt;</code>:</p>
     <pre><code>&lt;script src="/comments.js" defer&gt;&lt;/script&gt;</code></pre>
-    <p>Comments are stored by a small serverless function in the same repo. Deploy it to Netlify, set an admin token, and you're done. There's no database and nothing to build.</p>
+    <p>Notes are stored by a small serverless function in the same repo. Deploy it to Netlify, set an admin token, and you're done. There's no database and nothing to build.</p>
     <p><a href="https://github.com/gavinwye/notis.gavinwye.com#readme">Setup, options and the API are in the README.</a></p>
     <h3>Or ask an agent to do it</h3>
     <p>Paste this into Claude Code, Codex, Cursor or any coding agent that's working in your site's folder:</p>
@@ -138,8 +138,8 @@
   <section id="what-you-get">
     <h2>What you get</h2>
     <div class="cols">
-      <div><h3>Anchored to text</h3><p>Comments find their words again when the page loads, and survive small edits.</p></div>
-      <div><h3>Threads</h3><p>Replies, resolve and reopen, and a toggle for resolved ones.</p></div>
+      <div><h3>Anchored to text</h3><p>Notes find their words again when the page loads, and survive small edits.</p></div>
+      <div><h3>Replies</h3><p>Replies, resolve and reopen, and a toggle for resolved ones.</p></div>
       <div><h3>No accounts</h3><p>People type a name. You decide who can load the page.</p></div>
       <div><h3>One file, no dependencies</h3><p>The widget injects its own styles. It works with any site, any framework.</p></div>
     </div>
@@ -148,7 +148,7 @@
   <section id="what-it-doesnt-do">
     <h2>What it doesn't do</h2>
     <ul class="plain">
-      <li><b>No sign-in.</b> Anyone who can load the page can comment. Put review copies behind a password or a preview URL.</li>
+      <li><b>No sign-in.</b> Anyone who can load the page can leave a note. Put review copies behind a password or a preview URL.</li>
       <li><b>No notifications.</b> Nobody is emailed. You look at the panel or read the API.</li>
       <li><b>Not for busy pages.</b> It's built for a handful of reviewers, not a public comment section.</li>
     </ul>

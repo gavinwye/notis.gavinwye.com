@@ -10,7 +10,7 @@ Issues for each step are in the repo. Estimates are raw; no calibration is trust
 |---|---|
 | Code, README, issues | GitHub: `gavinwye/notis.gavinwye.com` (private until step 6) |
 | Website | Netlify project `notis-gavinwye`, base dir `site/`, domain `notis.gavinwye.com`; production deploys from `main`, every PR gets a deploy preview |
-| Blog post | drafted in the publisher desk (draft `imv2oih9lf5`, "Reviewing a page by commenting on the exact words"; copy in `docs/blog-post.md`), then a PR on `gavinwye/gavinwye.com` |
+| Blog post | drafted in the publisher desk (draft `imv2oih9lf5`, "Notis: leave a note on the exact words"; copy in `docs/blog-post.md`), then a PR on `gavinwye/gavinwye.com` |
 | Local folder | `~/com.gavinwye.notis` |
 
 ## Deploys
