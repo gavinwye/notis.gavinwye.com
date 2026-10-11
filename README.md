@@ -1,5 +1,7 @@
 # Notis
 
+[![CI](https://github.com/gavinwye/notis.gavinwye.com/actions/workflows/ci.yml/badge.svg)](https://github.com/gavinwye/notis.gavinwye.com/actions/workflows/ci.yml)
+
 Notis is Swedish for a short note. Select text on any page and leave a comment on it. A side panel lists every thread, with replies and resolve. Comments are shared with everyone who opens the page.
 
 It's one script on the page and one small serverless function behind it. No accounts, no database to set up, no build step.

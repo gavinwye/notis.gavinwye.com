@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests and syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Syntax check the widget, the server files and the scripts
+        run: |
+          node --check public/comments.js
+          for f in server/*.mjs scripts/*.mjs; do node --check "$f"; done
+
+  build:
+    name: Single-file server builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build into a temp folder
+        run: node scripts/build.mjs "$RUNNER_TEMP/server"
+      - name: Each built file parses and is self-contained
+        run: |
+          for host in netlify cloudflare node; do
+            f="$RUNNER_TEMP/server/$host.mjs"
+            test -s "$f" || { echo "::error::$f was not produced"; exit 1; }
+            node --check "$f"
+            if grep -q 'from "./core.mjs"' "$f"; then
+              echo "::error::$f still imports ./core.mjs, so it is not a single file"
+              exit 1
+            fi
+          done
