@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/gavinwye/notis.gavinwye.com/actions/workflows/ci.yml/badge.svg)](https://github.com/gavinwye/notis.gavinwye.com/actions/workflows/ci.yml)
 
-Notis is Swedish for a short note. Select text on any page and leave a comment on it. A side panel lists every thread, with replies and resolve. Comments are shared with everyone who opens the page.
+Think comments in Google Docs, for any web page. Notis is Swedish for a short note: select text on a page and leave a note on it. A side panel lists every note, with replies and resolve, and everyone who opens the page sees the same list.
 
 It's one script on the page and one small serverless function behind it. No accounts, no database to set up, no build step.
 
@@ -16,7 +16,7 @@ It was built to get fast reactions to early prototypes.
 
 ## What you get
 
-- **Comments on the exact words.** Select text, write a comment. The highlight stays on that text if the page changes slightly.
+- **Notes on the exact words.** Select text, leave a note. The highlight stays on that text if the page changes slightly.
 - **Pins on images.** Choose Pin on image in the panel and click the spot you mean. The pin stays at that point when the image is resized.
 - **Threads.** Replies, resolve and reopen, and a toggle to show resolved ones.
 - **Shared.** Everyone who opens the page sees the same comments.

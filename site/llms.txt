@@ -1,6 +1,6 @@
 # Notis
 
-> Select text on any page, or pin an image, and leave a comment. One script, one small serverless function, no accounts. MIT licensed.
+> Select text on any page, or pin an image, and leave a note. One script, one small serverless function, no accounts. MIT licensed.
 
 - [Add Notis to a site (instructions for an agent)](https://notis.gavinwye.com/install.md)
 - [README and API](https://github.com/gavinwye/notis.gavinwye.com#readme)
