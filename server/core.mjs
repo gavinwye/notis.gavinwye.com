@@ -31,6 +31,18 @@ export function createHandler({ storage, config = {} }) {
   const adminToken = config.adminToken || "";
   const allowed = (config.allowedOrigins || []).map((s) => s.trim()).filter(Boolean);
   const basePath = (config.basePath || "/api/comments").replace(/\/+$/, "");
+  const threadWrites = new Map();
+
+  // Serialize read-modify-write operations for each thread. Without this,
+  // simultaneous replies can both read the same version and one gets lost.
+  const withThreadWrite = (id, task) => {
+    const previous = threadWrites.get(id) || Promise.resolve();
+    const current = previous.catch(() => {}).then(task);
+    threadWrites.set(id, current);
+    return current.finally(() => {
+      if (threadWrites.get(id) === current) threadWrites.delete(id);
+    });
+  };
 
   const originAllowed = (origin) => !allowed.length || !origin || allowed.includes(origin);
 
@@ -131,19 +143,21 @@ export function createHandler({ storage, config = {} }) {
         if (!parsed.ok) return badBody(parsed);
         const text = clip((parsed.value || {}).text, LIMITS.text).trim();
         if (!text) return json({ error: "text is required" }, 400);
-        const t = await storage.get(seg[0]);
-        if (!t) return json({ error: "thread not found" }, 404);
-        if (!Array.isArray(t.replies)) t.replies = [];
-        if (t.replies.length >= LIMITS.replies) return json({ error: "too many replies" }, 400);
-        const reply = {
-          id: newId(),
-          author: clip((parsed.value || {}).author, LIMITS.author).trim() || "Anonymous",
-          text,
-          createdAt: Date.now(),
-        };
-        t.replies.push(reply);
-        await storage.put(t);
-        return json(reply, 201);
+        return withThreadWrite(seg[0], async () => {
+          const t = await storage.get(seg[0]);
+          if (!t) return json({ error: "thread not found" }, 404);
+          if (!Array.isArray(t.replies)) t.replies = [];
+          if (t.replies.length >= LIMITS.replies) return json({ error: "too many replies" }, 400);
+          const reply = {
+            id: newId(),
+            author: clip((parsed.value || {}).author, LIMITS.author).trim() || "Anonymous",
+            text,
+            createdAt: Date.now(),
+          };
+          t.replies.push(reply);
+          await storage.put(t);
+          return json(reply, 201);
+        });
       }
 
       // ---- PATCH /:id (resolve or reopen only) ----
@@ -152,11 +166,13 @@ export function createHandler({ storage, config = {} }) {
         if (!parsed.ok) return badBody(parsed);
         const body = parsed.value || {};
         if (typeof body.resolved !== "boolean") return json({ error: "resolved (boolean) is required" }, 400);
-        const t = await storage.get(seg[0]);
-        if (!t) return json({ error: "thread not found" }, 404);
-        t.resolved = body.resolved;
-        await storage.put(t);
-        return json(t);
+        return withThreadWrite(seg[0], async () => {
+          const t = await storage.get(seg[0]);
+          if (!t) return json({ error: "thread not found" }, 404);
+          t.resolved = body.resolved;
+          await storage.put(t);
+          return json(t);
+        });
       }
 
       // ---- DELETE (moderation) ----

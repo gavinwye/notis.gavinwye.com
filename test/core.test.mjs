@@ -38,6 +38,17 @@ test("reply, resolve and list by page", async () => {
   assert.equal((await call(h, "GET", "/api/comments")).json.length, 1);
 });
 
+test("concurrent replies are not lost", async () => {
+  const h = make();
+  const t = (await call(h, "POST", "/api/comments", { pageId: "/a", text: "hi" })).json;
+  const replies = await Promise.all(Array.from({ length: 25 }, (_, i) =>
+    call(h, "POST", `/api/comments/${t.id}/replies`, { text: `reply ${i}` })
+  ));
+  assert.ok(replies.every((reply) => reply.status === 201));
+  const [saved] = (await call(h, "GET", "/api/comments?page=/a")).json;
+  assert.equal(saved.replies.length, 25);
+});
+
 test("unknown thread is a 404; a malformed id never reaches storage", async () => {
   const h = make();
   assert.equal((await call(h, "PATCH", "/api/comments/abcdef123", { resolved: true })).status, 404);

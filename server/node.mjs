@@ -9,6 +9,7 @@
 //   COMMENTS_ADMIN_TOKEN      guards DELETE
 //   COMMENTS_ALLOWED_ORIGINS  comma-separated origins    (default: any)
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -30,7 +31,7 @@ export function fileStorage(dir) {
     },
     async put(t) {
       await ready;
-      const tmp = file(t.id) + "." + process.pid + ".tmp";
+      const tmp = file(t.id) + "." + process.pid + "." + randomUUID() + ".tmp";
       await writeFile(tmp, JSON.stringify(t));
       await rename(tmp, file(t.id)); // replace in one step, so a crash can't leave half a file
     },
