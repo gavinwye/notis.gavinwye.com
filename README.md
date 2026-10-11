@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/gavinwye/notis.gavinwye.com/actions/workflows/ci.yml/badge.svg)](https://github.com/gavinwye/notis.gavinwye.com/actions/workflows/ci.yml)
 
-Think comments in Google Docs, for any web page. Notis (say it *noo-TEESS*) is Swedish for a short note: select text on a page and leave a note on it. A side panel lists every note, with replies and resolve, and everyone who opens the page sees the same list.
+Think comments in Google Docs, for any web page. Notis (say it *noh-tis*) is Swedish for a short note: select text on a page and leave a note on it. A side panel lists every note, with replies and resolve, and everyone who opens the page sees the same list.
 
 It's one script on the page and one small serverless function behind it. No accounts, no database to set up, no build step.
 
