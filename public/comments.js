@@ -461,6 +461,7 @@
       '.cmt-pin.cmt-flash{animation:cmtPin 1.2s ease}@keyframes cmtPin{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}' +
       'html.cmt-pinning img{cursor:crosshair !important;outline:3px dashed #ffc726;outline-offset:3px}' +
       '.cmt-pinhint{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9004;background:#0b0c0c;color:#fff;padding:10px 16px;font-size:15px;font-weight:600}' +
+      '.cmt-panel.cmt-typing .cmt-foot{display:none}' +
       '.cmt-foot{flex:none;padding:10px 16px;border-top:2px solid #0b0c0c;background:#fff}.cmt-foot .cmt-footclose{width:100%;padding:10px 12px;font-size:15px}' +
       '.cmt-head .cmt-close{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;padding:0;background:#fff;color:#0b0c0c;border:2px solid #0b0c0c;cursor:pointer}.cmt-head .cmt-close:hover{background:#0b0c0c;color:#fff}.cmt-head .cmt-close:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}' +
       '.cmt-head .cmt-pinbtn{background:#0b0c0c;color:#fff;border:0;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}.cmt-head .cmt-pinbtn.cmt-on{background:#fff;color:#0b0c0c;box-shadow:inset 0 0 0 2px #0b0c0c}' +
@@ -544,6 +545,17 @@
     closeBtn.addEventListener('click', closePanel);
     foot.appendChild(closeBtn);
     panel.appendChild(head); panel.appendChild(sub); panel.appendChild(listEl); panel.appendChild(foot);
+    // On a phone, the bottom Close button would sit above the keyboard while someone
+    // types a reply and eat the space they need. Hide it until the field loses focus.
+    panel.addEventListener('focusin', function (e) {
+      if (isTouch() && e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName) && !foot.contains(e.target)) panel.classList.add('cmt-typing');
+    });
+    panel.addEventListener('focusout', function () {
+      setTimeout(function () {
+        var a = document.activeElement;
+        if (!(a && panel.contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName))) panel.classList.remove('cmt-typing');
+      }, 0);
+    });
     document.body.appendChild(panel);
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', fitPanel);
