@@ -235,6 +235,28 @@ curl -s "https://your-site.netlify.app/api/comments?page=/some/page" \
 
 Each open comment gives you the words it points at and what was said about them. Fix the page, then `PATCH` the thread with `{"resolved": true}`. We use this with Claude: it reads the open comments, makes the edits, and marks them resolved.
 
+## Keyboard and screen readers
+
+Everything works without a mouse.
+
+| Do this | With the keyboard |
+|---|---|
+| Comment on text | Select it (Shift + arrow keys), then press **Alt+Shift+C**. Or open the panel and choose **Comment on selection** |
+| Open or close the panel | Tab to **Comments** and press Enter. **Esc** closes it |
+| Pin an image | Panel, **Pin on image**, Tab to an image, arrow keys move the pin (Shift for small steps), **Enter** drops it |
+| Find a comment's words | **Go to text** in the panel moves focus to the highlight |
+| Back out | **Esc** closes the innermost thing first: the reply box or comment box, then pin mode, then the panel |
+
+What it does for assistive technology:
+
+- The panel is a labelled region, and a modal dialog on phones. The closed panel can't be reached with Tab.
+- Comments are a list. Each is named by the words it's about, and each button says which comment it acts on.
+- A live region announces "Comment added", "Reply added", "Thread resolved", how many comments are unresolved when the panel opens, and errors, with a Retry button.
+- Focus moves into the comment box when it opens and goes back to where it was when it closes.
+- Contrast meets WCAG 2.2 AA, focus is always a heavy ring, controls are at least 24 px (44 px on touch), motion stops with `prefers-reduced-motion`, and highlights and buttons keep a border in forced-colours mode.
+
+`node scripts/check-a11y.mjs` checks these in a browser (it can also run axe-core). It can't replace testing with a screen reader, and VoiceOver, NVDA and TalkBack haven't been run against it yet. If something is in the way, [report it](https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml).
+
 ## How comments stay attached
 
 Each comment stores the selected text plus up to 32 characters either side (the W3C text-quote approach). When the page loads, the widget finds that text again and highlights it. If the words have been edited, the comment stays in the panel with a note that the text has changed.
@@ -245,7 +267,7 @@ Worth knowing before you rely on it.
 
 - **No sign-in.** Anyone who can load the page can comment, under whatever name they type. Put the page behind a password or a Netlify preview, as you would for any review copy.
 - **No notifications.** Nobody is emailed. You look at the panel, or read the API.
-- **Not for high traffic.** All threads live in one blob, so two writes at the same instant can overwrite each other. That's fine for a handful of reviewers, not for a public comment section.
+- **Not for high traffic.** It's built for a handful of reviewers, not for a public comment section.
 - **Text that moves a lot loses its anchor.** The comment survives; the highlight doesn't.
 - **Pins are for `<img>` elements.** Not CSS backgrounds or inline SVG. A pin finds its image by `src`, so if the image changes, the pin is shown as lost.
 - **Pins need the Netlify function or localStorage.** The Supabase adapter would need a `pin` column.

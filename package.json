@@ -1,14 +1,26 @@
 {
   "name": "@gavinwye/notis",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Select text on any page and leave a shared, threaded comment on it. One script, one small serverless function.",
   "type": "module",
   "license": "MIT",
   "repository": "github:gavinwye/notis.gavinwye.com",
   "homepage": "https://notis.gavinwye.com",
   "bugs": "https://github.com/gavinwye/notis.gavinwye.com/issues",
-  "keywords": ["comments", "annotation", "review", "feedback", "widget"],
-  "files": ["dist", "server", "LICENSE", "README.md", "CHANGELOG.md"],
+  "keywords": [
+    "comments",
+    "annotation",
+    "review",
+    "feedback",
+    "widget"
+  ],
+  "files": [
+    "dist",
+    "server",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./comments.js": "./dist/comments.js",
     "./server/core": "./server/core.mjs",
@@ -18,7 +30,9 @@
     "./dist/server/*": "./dist/server/*",
     "./package.json": "./package.json"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "netlify dev",
     "build:server": "node scripts/build.mjs",
@@ -27,7 +41,15 @@
     "test": "node --test test/*.test.mjs",
     "deploy": "netlify deploy --prod"
   },
-  "peerDependencies": { "@netlify/blobs": "^10.0.0" },
-  "peerDependenciesMeta": { "@netlify/blobs": { "optional": true } },
-  "devDependencies": { "@netlify/blobs": "^10.7.9" }
+  "peerDependencies": {
+    "@netlify/blobs": "^10.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@netlify/blobs": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@netlify/blobs": "^10.7.9"
+  }
 }
