@@ -392,6 +392,21 @@
       'html.cmt-selecting .cmt-toggle{display:none}' +
       '.cmt-composer.cmt-sheet{position:fixed;top:auto;left:0;right:0;bottom:0;width:auto;max-height:85vh;overflow:auto;border-width:2px 0 0;padding:14px 16px 18px;box-shadow:0 -4px 16px rgba(0,0,0,.25);z-index:9005}' +
       '.cmt-composer.cmt-sheet input,.cmt-composer.cmt-sheet textarea{font-size:16px}' +
+      // The phone sheet is two short steps (name, then comment) so the keyboard leaves room for the page.
+      '.cmt-composer.cmt-compact{padding:10px 12px 12px;max-height:none}' +
+      '.cmt-compact .cmt-step[hidden]{display:none}' +
+      '.cmt-compact .cmt-q{font-size:14px;color:#505a5f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid #ffc726;padding-left:8px;margin:0 0 8px}' +
+      '.cmt-composer.cmt-compact textarea{min-height:0;height:58px;padding:6px 8px;margin:0}' +
+      '.cmt-composer.cmt-compact input{margin:0;height:42px;flex:1;min-width:0}' +
+      '.cmt-compact .cmt-top{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px;font-size:15px;font-weight:700}' +
+      '.cmt-compact .cmt-nameline{display:flex;gap:8px}' +
+      '.cmt-compact .cmt-row{margin-top:8px;justify-content:space-between;align-items:center}' +
+      '.cmt-compact .cmt-btns{display:flex;gap:6px;align-items:center}' +
+      '.cmt-compact .cmt-who{font-size:14px;color:#505a5f}' +
+      '.cmt-compact .cmt-link{background:none;border:0;color:#0b0c0c;font:inherit;font-weight:700;padding:0 0 0 4px;text-decoration:underline #ffc726 2px;text-underline-offset:3px;cursor:pointer}' +
+      '.cmt-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+      // The words being commented on stay visible once the native selection clears.
+      'mark.cmt-pending{font:inherit;color:#0b0c0c;background:#ffd94d;border-bottom:2px dashed #0b0c0c;padding:0 1px}' +
       '.cmt-composer.cmt-sheet .cmt-btn{padding:10px 18px;font-size:16px}.cmt-composer.cmt-sheet .cmt-cancel{padding:10px 12px;font-size:16px}' +
       '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer}';
     document.head.appendChild(css);
@@ -541,7 +556,7 @@
     if (quote.length < 2) return;
     emit('comments:select', { el: range.startContainer.parentElement });
     var rect = range.getBoundingClientRect();
-    var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end') };
+    var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end'), range: range.cloneRange() };
     var touch = isTouch();
     selBtn = el('button', touch ? 'cmt-selbar' : 'cmt-selbtn', touch ? 'Comment on selection' : 'Comment');
     if (!touch) {
@@ -587,33 +602,166 @@
     if (selBtn) { selBtn.remove(); selBtn = null; }
     document.documentElement.classList.remove('cmt-selecting');
   }
+  function clearPending() {
+    document.querySelectorAll('mark.cmt-pending').forEach(function (m) {
+      var par = m.parentNode; if (!par) return;
+      while (m.firstChild) par.insertBefore(m.firstChild, m);
+      par.removeChild(m); par.normalize();
+    });
+  }
+  // Wrap the selected words in a mark that outlives the native selection.
+  function wrapPending(range) {
+    var sc = range.startContainer, so = range.startOffset, ec = range.endContainer, eo = range.endOffset;
+    var nodes = [], root = range.commonAncestorContainer;
+    if (root.nodeType === 3) nodes.push(root);
+    else {
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function (n) {
+          if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          if (n.parentElement && n.parentElement.closest('[data-cmt]')) return NodeFilter.FILTER_REJECT;
+          return range.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+      });
+      var n; while ((n = w.nextNode())) nodes.push(n);
+    }
+    nodes.forEach(function (node) {
+      var a = node === sc ? so : 0, b = node === ec ? eo : node.nodeValue.length;
+      if (b <= a) return;
+      var r = document.createRange();
+      try { r.setStart(node, a); r.setEnd(node, b); } catch (e) { return; }
+      var m = document.createElement('mark'); m.className = 'cmt-pending'; m.setAttribute('data-cmt', 'pending');
+      try { r.surroundContents(m); } catch (e) { /* crosses a boundary; skip this piece */ }
+    });
+  }
   function removeComposer() {
+    clearPending();
     if (composer) { composer.remove(); composer = null; }
+    if (sheetKeys) { document.removeEventListener('keydown', sheetKeys); sheetKeys = null; }
     if (vvHandler && window.visualViewport) {
       window.visualViewport.removeEventListener('resize', vvHandler);
       window.visualViewport.removeEventListener('scroll', vvHandler);
     }
     vvHandler = null;
   }
-  var vvHandler = null;
+  var vvHandler = null, sheetKeys = null;
+
+
+  // Phones: a short sheet in two steps. Name first (skipped when it is saved),
+  // then the comment, with the selected words kept visible above it.
+  function openSheet(saved) {
+    composer = el('div', 'cmt-composer cmt-sheet cmt-compact');
+    composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a comment');
+    var sheet = composer, vv = window.visualViewport, who = savedName();
+
+    var live = el('div', 'cmt-live'); live.setAttribute('aria-live', 'polite');
+
+    // step 1: the name
+    var s1 = el('div', 'cmt-step');
+    var top = el('div', 'cmt-top');
+    var q1 = el('label', '', "What's your name?"); q1.setAttribute('for', 'cmt-name');
+    var cancel1 = el('button', 'cmt-link', 'Cancel'); cancel1.type = 'button'; cancel1.addEventListener('click', removeComposer);
+    top.appendChild(q1); top.appendChild(cancel1);
+    var line = el('div', 'cmt-nameline');
+    var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name'; nameIn.enterKeyHint = 'next';
+    var next = el('button', 'cmt-btn', 'Next'); next.type = 'button';
+    line.appendChild(nameIn); line.appendChild(next);
+    s1.appendChild(top); s1.appendChild(line);
+
+    // step 2: the comment
+    var s2 = el('div', 'cmt-step');
+    var quote = saved.pin
+      ? 'Pin on image: ' + imageLabel(saved.pin)
+      : '“' + saved.quote.slice(0, 70).trim() + (saved.quote.length > 70 ? '…' : '') + '”';
+    var prev = el('div', 'cmt-q', quote);
+    var ta = el('textarea'); ta.rows = 2; ta.setAttribute('aria-label', 'Your comment'); ta.id = 'cmt-new'; ta.enterKeyHint = 'done';
+    var row = el('div', 'cmt-row');
+    var whoEl = el('div', 'cmt-who');
+    var whoName = document.createElement('span'); whoName.setAttribute('data-cmt', 'ui');
+    var change = el('button', 'cmt-link', 'Change'); change.type = 'button';
+    whoEl.appendChild(document.createTextNode('as ')); whoEl.appendChild(whoName); whoEl.appendChild(change);
+    var btns = el('div', 'cmt-btns');
+    var cancel2 = el('button', 'cmt-cancel', 'Cancel'); cancel2.type = 'button'; cancel2.addEventListener('click', removeComposer);
+    var post = el('button', 'cmt-btn', 'Comment'); post.type = 'button';
+    btns.appendChild(cancel2); btns.appendChild(post);
+    row.appendChild(whoEl); row.appendChild(btns);
+    s2.appendChild(prev); s2.appendChild(ta); s2.appendChild(row);
+
+    function focusIn(node) { try { node.focus({ preventScroll: true }); } catch (e) { node.focus(); } }
+    // Keep the highlighted words in the part of the screen the sheet and keyboard leave free.
+    function insetTop() {
+      var node = document.elementFromPoint(Math.round(window.innerWidth / 2), 4), inset = 8;
+      while (node && node !== document.documentElement) {
+        var pos = getComputedStyle(node).position;
+        if (pos === 'fixed' || pos === 'sticky') { inset = Math.max(inset, node.getBoundingClientRect().bottom + 8); break; }
+        node = node.parentElement;
+      }
+      return inset;
+    }
+    function reveal() {
+      if (!sheet.isConnected) return;
+      var mark = document.querySelector('mark.cmt-pending'); if (!mark) return;
+      var r = mark.getBoundingClientRect();
+      var visBottom = Math.min(sheet.getBoundingClientRect().top, vv ? vv.offsetTop + vv.height : window.innerHeight) - 8;
+      var visTop = insetTop();
+      if (r.top >= visTop && r.bottom <= visBottom) return;
+      window.scrollBy(0, Math.round((r.top + r.height / 2) - (visTop + visBottom) / 2));
+    }
+    var raf = 0;
+    vvHandler = function () {
+      if (!vv || !sheet.isConnected) return;
+      sheet.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + 'px';
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(reveal);
+    };
+    if (vv) { vv.addEventListener('resize', vvHandler); vv.addEventListener('scroll', vvHandler); }
+
+    function show(step) {
+      s1.hidden = step !== 1; s2.hidden = step !== 2;
+      if (step === 1) { nameIn.value = who; live.textContent = 'Step 1 of 2: your name'; focusIn(nameIn); }
+      else { whoName.textContent = who; live.textContent = 'Step 2 of 2: your comment'; focusIn(ta); }
+      vvHandler && vvHandler();
+      setTimeout(reveal, 50);
+    }
+    function goNext() {
+      var v = nameIn.value.trim();
+      if (!v) { nameIn.classList.add('cmt-invalid'); focusIn(nameIn); return; }
+      who = v; saveName(v); show(2);
+    }
+    next.addEventListener('click', goNext);
+    nameIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); goNext(); } });
+    nameIn.addEventListener('input', function () { nameIn.classList.remove('cmt-invalid'); });
+    change.addEventListener('click', function () { show(1); });
+    post.addEventListener('click', function () {
+      var v = ta.value.trim();
+      if (!v) { focusIn(ta); return; }
+      var thread = {
+        id: uid(), pageId: COMMENTS_CONFIG.pageId, quote: saved.quote,
+        prefix: saved.prefix, suffix: saved.suffix, pin: saved.pin || undefined, author: who,
+        text: v, createdAt: Date.now(), resolved: false, replies: []
+      };
+      store.create(thread).then(function (created) {
+        emit('comments:created', { thread: created || thread });
+        removeComposer(); window.getSelection().removeAllRanges();
+        return refresh().then(function () { openPanel(); if (created && created.id) markActive(created.id); });
+      });
+    });
+    sheetKeys = function (e) { if (e.key === 'Escape' && composer === sheet) removeComposer(); };
+    document.addEventListener('keydown', sheetKeys);
+
+    composer.appendChild(live); composer.appendChild(s1); composer.appendChild(s2);
+    document.body.appendChild(composer);
+    if (saved.range) {
+      wrapPending(saved.range);
+      try { window.getSelection().removeAllRanges(); } catch (e) { /* ignore */ }
+    }
+    show(who ? 2 : 1);
+  }
 
   function openComposer(saved, rect) {
     removeSelBtn(); removeComposer();
+    if (isTouch()) { openSheet(saved); return; }
     composer = el('div', 'cmt-composer');
-    if (isTouch()) {
-      composer.classList.add('cmt-sheet');
-      composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a comment');
-      var vv = window.visualViewport, sheet = composer;
-      // Keep the sheet above the on-screen keyboard.
-      vvHandler = function () {
-        if (!vv || !sheet.isConnected) return;
-        sheet.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + 'px';
-      };
-      if (vv) { vv.addEventListener('resize', vvHandler); vv.addEventListener('scroll', vvHandler); }
-    } else {
-      composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
-      composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
-    }
+    composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+    composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
     var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
     nameIn.value = savedName();
     var nameLab = el('label', 'cmt-label', 'Your name'); nameLab.setAttribute('for', 'cmt-name');
@@ -642,7 +790,6 @@
     row.appendChild(cancel); row.appendChild(post);
     composer.appendChild(nameLab); composer.appendChild(nameIn); composer.appendChild(lab); composer.appendChild(ta); composer.appendChild(row);
     document.body.appendChild(composer); (nameIn.value ? ta : nameIn).focus();
-    if (vvHandler) vvHandler();
   }
   document.addEventListener('mousedown', function (e) {
     if (composer && !composer.contains(e.target)) removeComposer();
