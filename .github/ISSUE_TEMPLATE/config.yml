@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: How do I add Notis to my site?
+    url: https://notis.gavinwye.com/install.md
+    about: The install guide, written for people and for coding agents.

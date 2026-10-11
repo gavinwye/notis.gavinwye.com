@@ -1,0 +1,37 @@
+name: Bug report
+description: Something doesn't work, or works wrongly.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, and what you saw.
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations: { required: true }
+  - type: dropdown
+    id: host
+    attributes:
+      label: Where the comments are stored
+      options: [Netlify, Cloudflare Workers, Node, Browser only (apiBase null), Supabase, Other]
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Notis version
+      description: Type NotisVersion in the browser console.
+      placeholder: "0.2.0"
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Safari 18 on iPhone, Chrome on Windows
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps, or a link
+      description: Steps to see it, or a link to a page that shows it. Don't include tokens or private comments.

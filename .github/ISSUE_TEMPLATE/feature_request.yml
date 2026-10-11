@@ -1,0 +1,14 @@
+name: Idea or request
+description: Something Notis should do.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What are you trying to do
+      description: The situation and what's hard about it today, before the solution.
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help

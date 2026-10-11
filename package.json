@@ -1,13 +1,15 @@
 {
-  "name": "comments",
+  "name": "notis",
   "version": "0.1.0",
   "description": "Select text on any page and leave a shared, threaded comment on it. One script, one small serverless function.",
   "type": "module",
   "license": "MIT",
-  "repository": "github:gavinwye/comments.gavinwye.com",
-  "homepage": "https://comments.gavinwye.com",
+  "repository": "github:gavinwye/notis.gavinwye.com",
+  "homepage": "https://notis.gavinwye.com",
   "scripts": {
     "dev": "netlify dev",
+    "build:server": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
     "deploy": "netlify deploy --prod"
   },
   "dependencies": {

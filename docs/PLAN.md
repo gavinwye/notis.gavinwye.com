@@ -8,10 +8,10 @@ Issues for each step are in the repo. Estimates are raw; no calibration is trust
 
 | What | Where |
 |---|---|
-| Code, README, issues | GitHub: `gavinwye/comments.gavinwye.com` (private until step 6) |
-| Website | Netlify project `comments-gavinwye`, base dir `site/`, domain `comments.gavinwye.com`; production deploys from `main`, every PR gets a deploy preview |
+| Code, README, issues | GitHub: `gavinwye/notis.gavinwye.com` (private until step 6) |
+| Website | Netlify project `notis-gavinwye`, base dir `site/`, domain `notis.gavinwye.com`; production deploys from `main`, every PR gets a deploy preview |
 | Blog post | drafted in the publisher desk (draft `imv2oih9lf5`, "Reviewing a page by commenting on the exact words"; copy in `docs/blog-post.md`), then a PR on `gavinwye/gavinwye.com` |
-| Local folder | `~/com.gavinwye.comments` |
+| Local folder | `~/com.gavinwye.notis` |
 
 ## Deploys
 
@@ -29,18 +29,18 @@ The newest copy in use, with the other sites' project-specific settings left out
 
 ## Decisions for Gavin before it goes public
 
-1. **Name.** "Comments" is a working name and it's what the domain says. Fine, or something more findable?
+1. **Name.** Decided: Notis (Swedish for a short note). Technical names (`comments.js`, `/api/comments`, `comments:*` events, `COMMENTS_*` settings) stay as they are, because they say what the thing does and other sites already use them.
 2. **Font.** The panel uses Figtree. Fine as a default, but should be a setting.
 
 ## Steps
 
 | # | Step | Raw estimate | Needs Gavin |
 |---|---|---|---|
-| 1 | ~~Decide licence holder and name~~ licence done (Gavin Wye); name open | 15m | yes |
+| 1 | ~~Decide licence holder and name~~ done: Gavin Wye, Notis | 15m | |
 | 2 | ~~Rename the old project prefix~~ done | 1h | |
 | 3 | Make font and accent colour settings | 1h | |
 | 4 | Tests: function (a version exists, needs a Blobs stub) and widget (select, comment, reload) | 2h | |
-| 5 | ~~Deploy the website, then DNS for `comments.gavinwye.com`~~ done: Netlify project `comments-gavinwye` linked to this repo (base dir `site`), PRs get deploy previews | 30m | |
+| 5 | ~~Deploy the website, then DNS for `notis.gavinwye.com`~~ done: Netlify project `notis-gavinwye` linked to this repo (base dir `site`), PRs get deploy previews | 30m | |
 | 6 | Make the repo public, tag `v0.1.0`, add topics and a social image | 15m | yes |
 | 7 | Review the blog post on a preview, take `draft: true` out, merge | 30m | yes |
 | 8 | Point the other sites at one versioned copy instead of five | 2h | |

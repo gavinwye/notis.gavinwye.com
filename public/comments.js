@@ -32,6 +32,9 @@
                to browser-only localStorage)
 
    ── Events (dispatched on document) ────────────────────────────────
+     comments:created   detail:{ thread }  a comment was posted
+     comments:replied   detail:{ id }      a reply was posted
+     comments:resolved  detail:{ id, resolved }  a thread was resolved or reopened
      comments:select  detail:{ el }  text was selected inside the root
      comments:focus   detail:{ el }  a thread's highlight was focused
      comments:close                  the panel was closed
@@ -49,6 +52,8 @@
 (function () {
   "use strict";
 
+  var VERSION = "0.2.0";
+  window.NotisVersion = VERSION; // quote this when reporting a bug
   var script = document.currentScript;
   function dataAttr(name) { return script ? script.getAttribute(name) : null; }
 
@@ -447,7 +452,7 @@
       var actions = el('div', 'cmt-actions');
       var reBtn = el('button', '', 'Reply'); reBtn.addEventListener('click', function (e) { e.stopPropagation(); showReply(box, t.id); });
       var resBtn = el('button', '', t.resolved ? 'Reopen' : 'Resolve');
-      resBtn.addEventListener('click', function (e) { e.stopPropagation(); store.setResolved(t.id, !t.resolved).then(refresh); });
+      resBtn.addEventListener('click', function (e) { e.stopPropagation(); store.setResolved(t.id, !t.resolved).then(function () { emit('comments:resolved', { id: t.id, resolved: !t.resolved }); return refresh(); }); });
       actions.appendChild(reBtn); actions.appendChild(resBtn); box.appendChild(actions);
       box.addEventListener('click', function () { markActive(t.id); flash(t.id); });
       listEl.appendChild(box);
@@ -470,7 +475,7 @@
       if (!who) { nameIn.focus(); nameIn.classList.add('cmt-invalid'); return; }
       if (!v) { ta.focus(); return; }
       saveName(who);
-      store.reply(id, { id: uid(), author: who, text: v, createdAt: Date.now() }).then(refresh);
+      store.reply(id, { id: uid(), author: who, text: v, createdAt: Date.now() }).then(function () { emit('comments:replied', { id: id }); return refresh(); });
     });
     // Anyone who has not given a name yet is asked for it first, above the reply.
     var nameIn = null;
@@ -570,6 +575,7 @@
         text: v, createdAt: Date.now(), resolved: false, replies: []
       };
       store.create(thread).then(function (created) {
+        emit('comments:created', { thread: created || thread });
         removeComposer(); window.getSelection().removeAllRanges();
         return refresh().then(function () { openPanel(); if (created && created.id) markActive(created.id); });
       });

@@ -7,3 +7,4 @@ node_modules/
 .DS_Store
 
 site/comments.js
+site/server/
