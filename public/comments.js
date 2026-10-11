@@ -538,11 +538,11 @@
       // Keyboard focus is always a heavy ink ring (3:1 against yellow and white alike).
       '[data-cmt]:focus-visible{outline:3px solid #0b0c0c !important;outline-offset:2px}' +
       '[data-cmt][tabindex="-1"]:focus:not(:focus-visible){outline:0}' +
-      // Text fields: white, with a thin yellow border all round. Focus thickens the bottom
-      // border (padding gives the room back, so nothing shifts), and a transparent outline
+      // Text fields: white, with a thin black border. Focus turns the bottom border into a thick
+      // yellow bar (padding gives the room back, so nothing shifts), and a transparent outline
       // keeps a cue in forced-colours mode.
-      "input[data-cmt]:not([type=checkbox]),textarea[data-cmt]{background:#fff !important;border:2px solid #ffc726 !important;box-shadow:none !important;box-sizing:border-box}" +
-      "input[data-cmt]:not([type=checkbox]):focus,textarea[data-cmt]:focus{border-bottom-width:6px !important;padding-bottom:4px !important;outline:3px solid transparent !important;outline-offset:-3px}" +
+      "input[data-cmt]:not([type=checkbox]),textarea[data-cmt]{background:#fff !important;border:2px solid #0b0c0c !important;box-shadow:none !important;box-sizing:border-box}" +
+      "input[data-cmt]:not([type=checkbox]):focus,textarea[data-cmt]:focus{border-bottom:8px solid #ffc726 !important;padding-bottom:2px !important;outline:3px solid transparent !important;outline-offset:-3px}" +
       "input[data-cmt].cmt-invalid,textarea[data-cmt].cmt-invalid{border-color:#b3261e !important}" +
       'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #946b00;cursor:pointer;padding:0 1px}' +
       'mark.cmt-hl[data-count="2"]{background:#ffe9a0;border-bottom-width:3px}mark.cmt-hl[data-count="3"],mark.cmt-hl[data-count="4"],mark.cmt-hl[data-count="5"]{background:#ffdd73;border-bottom-width:4px}' +
