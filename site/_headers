@@ -1,0 +1,11 @@
+# Versioned copies never change, so they can be cached for good.
+/v*/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The current, unversioned files change when a new version is released.
+/comments.js
+  Cache-Control: public, max-age=300, must-revalidate
+/server/*
+  Cache-Control: public, max-age=300, must-revalidate
+/version.json
+  Cache-Control: public, max-age=300, must-revalidate

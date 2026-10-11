@@ -156,9 +156,15 @@
 </main>
 
 <footer>
-  <div class="wrap">Made by <a href="https://gavinwye.com">Gavin Wye</a>. MIT licensed. <a href="https://github.com/gavinwye/notis.gavinwye.com">Source on GitHub</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml">Report a bug</a>.</div>
+  <div class="wrap">Made by <a href="https://gavinwye.com">Gavin Wye</a>. MIT licensed. <a href="https://github.com/gavinwye/notis.gavinwye.com">Source on GitHub</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml">Report a bug</a>. <a href="/version.json">Version <span id="site-version">0.2</span></a>, <a href="https://github.com/gavinwye/notis.gavinwye.com/blob/main/CHANGELOG.md">changelog</a>.</div>
 </footer>
 
+<script>
+  // The footer shows the version that was built: /version.json is written by the build.
+  fetch("/version.json").then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
+    if (v && v.version) document.getElementById("site-version").textContent = v.version;
+  }).catch(function () { /* keep the fallback text */ });
+</script>
 <script>
   document.getElementById("copy-prompt").addEventListener("click", function () {
     var text = document.getElementById("agent-prompt").textContent, note = document.getElementById("copy-note");

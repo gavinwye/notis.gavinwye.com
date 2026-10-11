@@ -8,4 +8,8 @@ node_modules/
 
 site/comments.js
 site/server/
+dist/
+site/v[0-9]*/
+site/version.json
+site/.stage-*
 .claude/worktrees/
