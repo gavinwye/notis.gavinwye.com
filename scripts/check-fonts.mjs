@@ -36,7 +36,7 @@ for (const [label, opts] of [["desktop", { viewport: { width: 1100, height: 800 
   const page = await ctx.newPage();
   // The only other origin the page may call is its own analytics (Umami, which does nothing off the production host).
   const external = [];
-  page.on("request", (r) => { const u = r.url(); if (!u.startsWith(base) && !u.startsWith("data:") && !u.startsWith("https://stats.gavinwye.com/")) external.push(u); });
+  page.on("request", (r) => { const u = r.url(); if (!u.startsWith(base) && !u.startsWith("data:") && !u.startsWith("https://umami.gvn.sh/")) external.push(u); });
   await page.goto(base);
   await page.waitForTimeout(600);
   const info = await page.evaluate(async () => {
