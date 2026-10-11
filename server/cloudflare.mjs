@@ -45,6 +45,9 @@ export default {
       config: {
         adminToken: env.COMMENTS_ADMIN_TOKEN,
         allowedOrigins: (env.COMMENTS_ALLOWED_ORIGINS || "").split(","),
+        maxThreadsPerPage: env.COMMENTS_MAX_THREADS_PER_PAGE,
+        maxRepliesPerThread: env.COMMENTS_MAX_REPLIES_PER_THREAD,
+        duplicateWindowMs: env.COMMENTS_DUPLICATE_WINDOW_MS,
         basePath: "/api/comments",
       },
     });

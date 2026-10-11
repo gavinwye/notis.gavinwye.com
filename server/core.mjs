@@ -31,6 +31,13 @@ export function createHandler({ storage, config = {} }) {
   const adminToken = config.adminToken || "";
   const allowed = (config.allowedOrigins || []).map((s) => s.trim()).filter(Boolean);
   const basePath = (config.basePath || "/api/comments").replace(/\/+$/, "");
+  const positiveInt = (value, fallback) => {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  };
+  const maxThreadsPerPage = positiveInt(config.maxThreadsPerPage, 500);
+  const maxRepliesPerThread = positiveInt(config.maxRepliesPerThread, LIMITS.replies);
+  const duplicateWindowMs = positiveInt(config.duplicateWindowMs, 60_000);
   const threadWrites = new Map();
 
   // Serialize read-modify-write operations for each thread. Without this,
@@ -122,19 +129,26 @@ export function createHandler({ storage, config = {} }) {
           pin = { src, alt: clip(b.pin.alt, LIMITS.alt), i: Number.isInteger(i) && i >= 0 && i < 10000 ? i : 0, x, y };
         }
 
-        // The server owns id, createdAt, resolved and replies.
-        const thread = {
-          id: newId(), pageId,
-          quote: clip(b.quote, LIMITS.quote),
-          prefix: clip(b.prefix, LIMITS.prefix),
-          suffix: clip(b.suffix, LIMITS.suffix),
-          author: clip(b.author, LIMITS.author).trim() || "Anonymous",
-          text,
-          ...(pin ? { pin } : {}),
-          createdAt: Date.now(), resolved: false, replies: [],
-        };
-        await storage.put(thread);
-        return json(thread, 201);
+        return withThreadWrite(`page:${pageId}`, async () => {
+          const author = clip(b.author, LIMITS.author).trim() || "Anonymous";
+          const existing = (await storage.list()).filter((thread) => thread.pageId === pageId);
+          if (existing.length >= maxThreadsPerPage) return json({ error: "too many threads on this page" }, 429);
+          const duplicate = existing.some((thread) => thread.author === author && thread.text === text &&
+            Date.now() - Number(thread.createdAt || 0) < duplicateWindowMs);
+          if (duplicate) return json({ error: "duplicate comment" }, 409);
+
+          const thread = {
+            id: newId(), pageId,
+            quote: clip(b.quote, LIMITS.quote),
+            prefix: clip(b.prefix, LIMITS.prefix),
+            suffix: clip(b.suffix, LIMITS.suffix),
+            author, text,
+            ...(pin ? { pin } : {}),
+            createdAt: Date.now(), resolved: false, replies: [],
+          };
+          await storage.put(thread);
+          return json(thread, 201);
+        });
       }
 
       // ---- POST /:id/replies ----
@@ -147,10 +161,14 @@ export function createHandler({ storage, config = {} }) {
           const t = await storage.get(seg[0]);
           if (!t) return json({ error: "thread not found" }, 404);
           if (!Array.isArray(t.replies)) t.replies = [];
-          if (t.replies.length >= LIMITS.replies) return json({ error: "too many replies" }, 400);
+          if (t.replies.length >= maxRepliesPerThread) return json({ error: "too many replies" }, 429);
+          const author = clip((parsed.value || {}).author, LIMITS.author).trim() || "Anonymous";
+          const duplicate = t.replies.some((reply) => reply.author === author && reply.text === text &&
+            Date.now() - Number(reply.createdAt || 0) < duplicateWindowMs);
+          if (duplicate) return json({ error: "duplicate reply" }, 409);
           const reply = {
             id: newId(),
-            author: clip((parsed.value || {}).author, LIMITS.author).trim() || "Anonymous",
+            author,
             text,
             createdAt: Date.now(),
           };

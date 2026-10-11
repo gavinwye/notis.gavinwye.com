@@ -39,7 +39,7 @@ test("reply, resolve and list by page", async () => {
 });
 
 test("concurrent replies are not lost", async () => {
-  const h = make();
+  const h = make({ duplicateWindowMs: 1 });
   const t = (await call(h, "POST", "/api/comments", { pageId: "/a", text: "hi" })).json;
   const replies = await Promise.all(Array.from({ length: 25 }, (_, i) =>
     call(h, "POST", `/api/comments/${t.id}/replies`, { text: `reply ${i}` })
@@ -47,6 +47,21 @@ test("concurrent replies are not lost", async () => {
   assert.ok(replies.every((reply) => reply.status === 201));
   const [saved] = (await call(h, "GET", "/api/comments?page=/a")).json;
   assert.equal(saved.replies.length, 25);
+});
+
+test("duplicate writes and configured ceilings are enforced", async () => {
+  const h = make({ maxThreadsPerPage: 1, maxRepliesPerThread: 1 });
+  const first = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "hello" });
+  assert.equal(first.status, 201);
+  assert.equal((await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "hello" })).status, 429);
+  assert.equal((await call(h, "POST", `/api/comments/${first.json.id}/replies`, { author: "Jo", text: "reply" })).status, 201);
+  assert.equal((await call(h, "POST", `/api/comments/${first.json.id}/replies`, { author: "Jo", text: "reply" })).status, 429);
+
+  const duplicates = make({ maxThreadsPerPage: 5, maxRepliesPerThread: 5 });
+  const thread = (await call(duplicates, "POST", "/api/comments", { pageId: "/b", author: "Sam", text: "same" })).json;
+  assert.equal((await call(duplicates, "POST", "/api/comments", { pageId: "/b", author: "Sam", text: "same" })).status, 409);
+  await call(duplicates, "POST", `/api/comments/${thread.id}/replies`, { author: "Jo", text: "same" });
+  assert.equal((await call(duplicates, "POST", `/api/comments/${thread.id}/replies`, { author: "Jo", text: "same" })).status, 409);
 });
 
 test("unknown thread is a 404; a malformed id never reaches storage", async () => {

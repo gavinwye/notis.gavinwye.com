@@ -168,12 +168,17 @@ If it's on a different address from your site, give the widget the full URL (`ap
 | Variable | Default | What it does |
 |---|---|---|
 | `COMMENTS_ADMIN_TOKEN` | unset | Needed to delete. If unset, all deletes are refused. |
-| `COMMENTS_ALLOWED_ORIGINS` | unset (any) | Comma-separated origins allowed to call the API from a browser. Set this to your site. |
+| `COMMENTS_ALLOWED_ORIGINS` | unset (any) | Browser CORS policy. This is not authentication and does not block scripts or bots that omit `Origin`. |
+| `COMMENTS_MAX_THREADS_PER_PAGE` | `500` | Refuse new threads after a page reaches this ceiling. |
+| `COMMENTS_MAX_REPLIES_PER_THREAD` | `1000` | Refuse new replies after a thread reaches this ceiling. |
+| `COMMENTS_DUPLICATE_WINDOW_MS` | `60000` | Reject an identical comment or reply from the same author during this window. |
 | `COMMENTS_STORE` | `comments` | Netlify only: the blob store name. Use a different one for each site. |
 | `COMMENTS_DIR` | `./comments-data` | Node only: where the files go. |
 | `PORT` | `8787` | Node only. |
 
 Each thread is stored on its own, so two reviewers adding notes at the same moment don't overwrite each other.
+
+The built-in ceilings limit accidental floods, but public anonymous comments still need host-level rate limiting for determined abuse. Use Netlify's rate-limit rules, a Cloudflare rate-limiting rule, or your Node reverse proxy to cap `POST` requests to the comments API. If reviews must be private, protect the route with your host's authentication or access-control layer; a secret embedded in the browser widget would not be secret.
 
 ## Where your notes live
 
