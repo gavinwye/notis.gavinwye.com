@@ -15,6 +15,8 @@ An accessibility pass. Because the widget's source changed, this is a new versio
 - `scripts/check-a11y.mjs`, a browser check for keyboard use, announcements, contrast, target size, reduced motion, forced colours and zoom. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
 
 ### Changed
+- **Fonts:** the widget no longer forces Figtree. It uses `--notis-font` if the page sets it, then Barlow, then the system font, and it loads no font of its own. Bold labels use weight 600, so a page that serves Barlow 400/500/600 doesn't get a synthesised bold.
+- **The Notis site** now sets its type in Barlow and Barlow Semi Condensed, the family gavinwye.com uses, served from its own files with no request to Google Fonts. The share image, screenshots and demo form use the same fonts.
 - **Notes, not comments, on screen.** The button, panel, note box, announcements and errors now say Notes, Add a note and so on. A new `noun` option (`data-noun`) sets the word: `noun: "comment"` gives Comments and Add a comment again. File names, the API (`/api/comments`), events (`comments:*`) and settings (`COMMENTS_*`) are unchanged.
 - Escape closes the innermost thing first (reply box or comment box, then pin mode, then the panel), and focus returns to where it was. The comment box and the phone sheet keep Tab inside them while open.
 - The panel is a labelled region, and a modal dialog on phones with focus kept inside. The closed panel is hidden from Tab and screen readers, and the Comments button reports `aria-expanded`.

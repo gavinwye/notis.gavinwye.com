@@ -13,7 +13,7 @@ import { dirname, join, extname } from "node:path";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const site = join(root, "site");
 const out = join(root, "docs", "images");
-const types = { ".html": "text/html", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".md": "text/markdown" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".md": "text/markdown", ".woff2": "font/woff2", ".txt": "text/plain" };
 
 const server = createServer(async (req, res) => {
   const p = req.url.split("?")[0];
