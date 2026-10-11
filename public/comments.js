@@ -538,6 +538,11 @@
       // Keyboard focus is always a heavy ink ring (3:1 against yellow and white alike).
       '[data-cmt]:focus-visible{outline:3px solid #0b0c0c !important;outline-offset:2px}' +
       '[data-cmt][tabindex="-1"]:focus:not(:focus-visible){outline:0}' +
+      // Text fields: no box around them. The focus cue is a heavy ink bar along the bottom
+      // (3:1 or better against the grey field), with a transparent outline kept so it still
+      // shows in forced-colours mode.
+      "input[data-cmt]:focus-visible,textarea[data-cmt]:focus-visible{outline:3px solid transparent !important;outline-offset:-3px;box-shadow:inset 0 -4px 0 #0b0c0c !important}" +
+      "input[data-cmt].cmt-invalid:focus-visible,textarea[data-cmt].cmt-invalid:focus-visible{box-shadow:inset 0 -4px 0 #b3261e !important}" +
       'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #946b00;cursor:pointer;padding:0 1px}' +
       'mark.cmt-hl[data-count="2"]{background:#ffe9a0;border-bottom-width:3px}mark.cmt-hl[data-count="3"],mark.cmt-hl[data-count="4"],mark.cmt-hl[data-count="5"]{background:#ffdd73;border-bottom-width:4px}' +
       'mark.cmt-hl[data-resolved]{background:#eef0f2;border-bottom-color:#6b7478}' +
