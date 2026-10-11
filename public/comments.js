@@ -162,11 +162,16 @@
 
   /* ---------- anchoring (W3C text-quote style) ---------- */
   function rootEl() { return document.querySelector(COMMENTS_CONFIG.root) || document.body; }
+  // Our own interface is not page text. Highlights and the pending mark are
+  // the page's own words wearing a mark, so they stay in the text index:
+  // otherwise a selection next to an existing comment would save a prefix
+  // and suffix with those words missing, and would not find itself again.
+  var UI = '[data-cmt]:not(mark.cmt-hl):not(mark.cmt-pending)';
   function textNodes(root) {
     var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: function (n) {
         if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        if (n.parentElement && n.parentElement.closest("[data-cmt]")) return NodeFilter.FILTER_REJECT;
+        if (n.parentElement && n.parentElement.closest(UI)) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -177,62 +182,119 @@
     nodes.forEach(function (node) { map.push({ node: node, start: full.length, end: full.length + node.nodeValue.length }); full += node.nodeValue; });
     return { full: full, map: map };
   }
+  // Try the quote with all of its context, then with half of it, then alone.
+  // The context says which occurrence was meant when a word appears twice.
+  function contexts(thread) {
+    var pre = thread.prefix || "", suf = thread.suffix || "", out = [[pre, suf]];
+    if (suf) out.push([pre, ""]);
+    if (pre) out.push(["", suf]);
+    if (pre || suf) out.push(["", ""]);
+    return out;
+  }
   function locate(ix, thread) {
-    var idx = -1;
-    if (thread.prefix || thread.suffix) {
-      var probe = thread.prefix + thread.quote + thread.suffix, p = ix.full.indexOf(probe);
-      if (p >= 0) idx = p + thread.prefix.length;
+    var q = String(thread.quote || ""), tries = contexts(thread), i, p;
+    if (!q) return null;
+    for (i = 0; i < tries.length; i++) {
+      p = ix.full.indexOf(tries[i][0] + q + tries[i][1]);
+      if (p >= 0) { p += tries[i][0].length; return { start: p, end: p + q.length }; }
     }
-    if (idx < 0) idx = ix.full.indexOf(thread.quote);
-    if (idx >= 0) return { start: idx, end: idx + thread.quote.length };
-    return locateLoose(ix, thread.quote);
+    return locateLoose(ix, thread, tries);
   }
   // A selection that crosses paragraphs or list items carries line breaks the
-  // page's text does not, so compare with all whitespace left out and map the
-  // match back to real positions.
-  function locateLoose(ix, quote) {
-    var want = String(quote).replace(/\s+/g, "");
+  // page's text does not (and a phone adds non-breaking spaces), so compare
+  // with all whitespace left out and map the match back to real positions.
+  function locateLoose(ix, thread, tries) {
+    var strip = function (x) { return String(x || "").replace(/\s+/g, ""); };
+    var want = strip(thread.quote);
     if (want.length < 2) return null;
-    var flat = "", at = [], i, ch;
-    for (i = 0; i < ix.full.length; i++) {
-      ch = ix.full.charAt(i);
-      if (/\s/.test(ch)) continue;
-      flat += ch; at.push(i);
+    if (!ix.flat) {
+      var flat = "", at = [], i, ch;
+      for (i = 0; i < ix.full.length; i++) {
+        ch = ix.full.charAt(i);
+        if (/\s/.test(ch)) continue;
+        flat += ch; at.push(i);
+      }
+      ix.flat = flat; ix.at = at;
     }
-    var f = flat.indexOf(want);
-    if (f < 0) return null;
-    return { start: at[f], end: at[f + want.length - 1] + 1 };
+    for (var k = 0; k < tries.length; k++) {
+      var a = strip(tries[k][0]), b = strip(tries[k][1]), f = ix.flat.indexOf(a + want + b);
+      if (f >= 0) {
+        f += a.length;
+        return { start: ix.at[f], end: ix.at[f + want.length - 1] + 1 };
+      }
+    }
+    return null;
   }
-  function highlightRange(ix, thread, start, end) {
-    ix.map.forEach(function (seg) {
-      if (seg.end <= start || seg.start >= end) return;
-      var a = Math.max(start, seg.start) - seg.start, b = Math.min(end, seg.end) - seg.start;
-      var r = document.createRange();
-      try { r.setStart(seg.node, a); r.setEnd(seg.node, b); } catch (e) { return; }
-      var m = document.createElement("mark");
-      m.className = "cmt-hl"; m.setAttribute("data-cmt", "hl"); m.dataset.thread = thread.id;
-      if (thread.resolved) m.dataset.resolved = "1";
-      m.addEventListener("click", function (e) { e.stopPropagation(); openPanel(); focusThread(thread.id); });
-      try { r.surroundContents(m); } catch (e) { /* spans block boundary — skip this segment */ }
-    });
+  // Wrap every piece of text once, however many comments cover it. A piece
+  // records all of the threads that cover it, so comments can overlap, nest or
+  // sit on the same words and every one of them keeps a highlight.
+  function wrapPieces(seg, hits, wrapped) {
+    var len = seg.node.nodeValue.length, cuts = { 0: 1 }, pts, pieces = [], i, k;
+    cuts[len] = 1;
+    var clamp = function (n) { return Math.max(0, Math.min(len, n)); };
+    hits.forEach(function (r) { cuts[clamp(r.start - seg.start)] = 1; cuts[clamp(r.end - seg.start)] = 1; });
+    pts = Object.keys(cuts).map(Number).sort(function (x, y) { return x - y; });
+    for (i = 0; i < pts.length - 1; i++) {
+      var a = pts[i], b = pts[i + 1];
+      var cover = hits.filter(function (r) { return r.start - seg.start <= a && r.end - seg.start >= b; });
+      if (cover.length) pieces.push({ a: a, b: b, cover: cover });
+    }
+    // From the end of the node backwards, so the offsets of earlier pieces stay valid.
+    var node = seg.node;
+    for (k = pieces.length - 1; k >= 0; k--) {
+      var pc = pieces[k];
+      try {
+        if (pc.b < node.nodeValue.length) node.splitText(pc.b);
+        var mid = pc.a > 0 ? node.splitText(pc.a) : node;
+        var ordered = pc.cover.map(function (r) { return r.thread; })
+          .sort(function (x, y) { return (x.createdAt || 0) - (y.createdAt || 0); });
+        var m = document.createElement("mark");
+        m.className = "cmt-hl"; m.setAttribute("data-cmt", "hl");
+        m.dataset.threads = ordered.map(function (t) { return t.id; }).join(" ");
+        m.dataset.thread = ordered[ordered.length - 1].id;   // the newest one
+        m.dataset.count = String(ordered.length);
+        if (ordered.every(function (t) { return t.resolved; })) m.dataset.resolved = "1";
+        m.addEventListener("click", markClick);
+        mid.parentNode.insertBefore(m, mid);
+        m.appendChild(mid);
+        ordered.forEach(function (t) { wrapped[t.id] = true; });
+      } catch (e) { /* this piece stays unmarked; the thread is reported as not found below */ }
+    }
   }
+  // Click a highlight to open its comment. Where several comments sit on the
+  // same words, each click moves on to the next, newest first.
+  function markClick(e) {
+    e.stopPropagation();
+    var m = e.currentTarget, ids = (m.dataset.threads || "").split(" ").filter(Boolean);
+    if (!ids.length) return;
+    var i = Number(m.dataset.cycle || 0);
+    m.dataset.cycle = String(i + 1);
+    openPanel();
+    focusThread(ids[ids.length - 1 - (i % ids.length)]);
+  }
+  var placed = {}; // thread id -> where its text starts in the page's text
   // Build the text index ONCE from the un-highlighted DOM, locate every thread
-  // against that single snapshot, then apply highlights from the last match to
-  // the first. Wrapping a later match in a <mark> can't then shift the offsets
-  // of earlier ones (which was corrupting multi-comment pages).
+  // against that snapshot, then cut each text node at every comment boundary.
   function applyHighlights() {
     var ix = buildIndex(rootEl());
-    var located = [];
-    found = {};
+    var ranges = [], wrapped = {};
+    found = {}; placed = {};
     threads.forEach(function (t) {
       if (t.pin) return; // pinned to an image; renderPins() places these
       var loc = locate(ix, t);
-      if (loc) found[t.id] = true;
+      if (!loc || loc.end <= loc.start) return;
+      found[t.id] = true; placed[t.id] = loc.start;
       if (t.resolved && !showResolved) return;
-      if (loc) located.push({ thread: t, start: loc.start, end: loc.end });
+      ranges.push({ thread: t, start: loc.start, end: loc.end });
     });
-    located.sort(function (a, b) { return b.start - a.start; });
-    located.forEach(function (item) { highlightRange(ix, item.thread, item.start, item.end); });
+    ix.map.forEach(function (seg) {
+      var hits = ranges.filter(function (r) { return r.end > seg.start && r.start < seg.end; });
+      if (hits.length) wrapPieces(seg, hits, wrapped);
+    });
+    // A comment that could not be marked is reported as changed, never dropped quietly.
+    ranges.forEach(function (r) {
+      if (!wrapped[r.thread.id]) { found[r.thread.id] = false; delete placed[r.thread.id]; }
+    });
   }
   function clearHighlights() {
     document.querySelectorAll('mark.cmt-hl').forEach(function (m) {
@@ -260,18 +322,26 @@
   // longer be placed goes last, oldest first.
   function anchorNode(t) {
     if (t.pin) return findImage(t.pin);
-    return document.querySelector('mark.cmt-hl[data-thread="' + cssId(t.id) + '"]');
+    return document.querySelector('mark.cmt-hl[data-threads~="' + cssId(t.id) + '"]');
   }
   function byPosition(list) {
-    var rows = list.map(function (t) { return { t: t, n: anchorNode(t) }; });
+    var rows = list.map(function (t) {
+      var text = !t.pin && found[t.id] && placed[t.id] != null;
+      return { t: t, n: text || t.pin ? anchorNode(t) : null, s: text ? placed[t.id] : null };
+    });
+    var created = function (r) { return r.t.createdAt || 0; };
     rows.sort(function (a, b) {
+      // anything that can't be placed any more goes last, oldest first
       if (!a.n || !b.n) {
-        if (a.n !== b.n) return a.n ? -1 : 1;
-        return (a.t.createdAt || 0) - (b.t.createdAt || 0);
+        if (!a.n && !b.n) return created(a) - created(b);
+        return a.n ? -1 : 1;
       }
+      // two pieces of text: by where they start in the page's text
+      if (a.s != null && b.s != null) return (a.s - b.s) || (created(a) - created(b));
+      // anything else involves an image: by document order, then top to bottom, left to right
       if (a.n === b.n) {
         var pa = a.t.pin || { x: 0, y: 0 }, pb = b.t.pin || { x: 0, y: 0 };
-        return (pa.y - pb.y) || (pa.x - pb.x) || ((a.t.createdAt || 0) - (b.t.createdAt || 0));
+        return (pa.y - pb.y) || (pa.x - pb.x) || (created(a) - created(b));
       }
       return a.n.compareDocumentPosition(b.n) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
     });
@@ -350,6 +420,7 @@
       '[data-cmt]{box-sizing:border-box;font-family:"Figtree",arial,sans-serif;line-height:1.45;font-style:normal;letter-spacing:normal}' +
       '.cmt-panel,.cmt-composer{color:#0b0c0c;color-scheme:light}.cmt-panel .cmt-body{color:#0b0c0c}.cmt-panel label{color:#505a5f}' +
       'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #ffc726;cursor:pointer;padding:0 1px}' +
+      'mark.cmt-hl[data-count="2"]{background:#ffe9a0;border-bottom-width:3px}mark.cmt-hl[data-count="3"],mark.cmt-hl[data-count="4"],mark.cmt-hl[data-count="5"]{background:#ffdd73;border-bottom-width:4px}' +
       'mark.cmt-hl[data-resolved]{background:#eef0f2;border-bottom-color:#b1b4b6}' +
       'mark.cmt-hl.cmt-flash{animation:cmtFlash 1.2s ease}' +
       '@keyframes cmtFlash{0%,100%{background:#fff3c4}50%{background:#ffd94d}}' +
@@ -586,7 +657,7 @@
       emit('comments:focus', { el: pe });
       return;
     }
-    var m = document.querySelector('mark.cmt-hl[data-thread="' + cssId(id) + '"]');
+    var m = document.querySelector('mark.cmt-hl[data-threads~="' + cssId(id) + '"]');
     if (m) {
       m.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
       m.classList.add('cmt-flash'); setTimeout(function () { m.classList.remove('cmt-flash'); }, 1200);
@@ -606,7 +677,7 @@
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     var range = sel.getRangeAt(0);
     if (!rootEl().contains(range.commonAncestorContainer)) return;
-    if (range.startContainer.parentElement && range.startContainer.parentElement.closest('[data-cmt]')) return;
+    if (range.startContainer.parentElement && range.startContainer.parentElement.closest(UI)) return;
     var quote = sel.toString().trim();
     if (quote.length < 2) return;
     emit('comments:select', { el: range.startContainer.parentElement });
@@ -642,15 +713,37 @@
     btn.addEventListener('click', open);
     document.body.appendChild(btn);
   }
+  // Where a selection boundary falls in the page's text. A boundary can be an
+  // element (offset = child index) as well as a text node, so find the first
+  // indexed text at or after it.
+  function offsetOf(ix, container, offset) {
+    var i, seg;
+    if (container.nodeType === 3) {
+      for (i = 0; i < ix.map.length; i++) {
+        if (ix.map[i].node === container) return ix.map[i].start + Math.min(offset, container.nodeValue.length);
+      }
+    }
+    var r = document.createRange();
+    try { r.setStart(container, offset); } catch (e) { return -1; }
+    r.collapse(true);
+    for (i = 0; i < ix.map.length; i++) {
+      seg = ix.map[i];
+      if (r.comparePoint(seg.node, 0) >= 0) return seg.start;
+    }
+    return ix.full.length;
+  }
+  // Up to 32 characters either side of the words, measured from where the
+  // words really start and end (leading and trailing spaces are not part of the quote).
   function ctx(range, n, which) {
     try {
       var ix = buildIndex(rootEl());
-      var node = which === 'start' ? range.startContainer : range.endContainer;
-      var off = which === 'start' ? range.startOffset : range.endOffset;
-      var seg = ix.map.find(function (s) { return s.node === node; });
-      var g = seg ? seg.start + off : ix.full.indexOf(range.toString());
-      if (g < 0) return '';
-      return n < 0 ? ix.full.slice(Math.max(0, g + n), g) : ix.full.slice(g, g + n);
+      var s0 = offsetOf(ix, range.startContainer, range.startOffset);
+      var e0 = offsetOf(ix, range.endContainer, range.endOffset);
+      if (s0 < 0 || e0 <= s0) return '';
+      var raw = ix.full.slice(s0, e0);
+      s0 += raw.length - raw.replace(/^\s+/, '').length;
+      e0 -= raw.length - raw.replace(/\s+$/, '').length;
+      return n < 0 ? ix.full.slice(Math.max(0, s0 + n), s0) : ix.full.slice(e0, e0 + n);
     } catch (e) { return ''; }
   }
   function removeSelBtn() {
@@ -673,7 +766,7 @@
       var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode: function (n) {
           if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-          if (n.parentElement && n.parentElement.closest('[data-cmt]')) return NodeFilter.FILTER_REJECT;
+          if (n.parentElement && n.parentElement.closest(UI)) return NodeFilter.FILTER_REJECT;
           return range.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
         }
       });
