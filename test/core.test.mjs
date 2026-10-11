@@ -35,13 +35,15 @@ test("reply, resolve and list by page", async () => {
   assert.equal(r.json.replies.length, 1);
   assert.equal((await call(h, "GET", "/api/comments?page=/a")).json.length, 1);
   assert.equal((await call(h, "GET", "/api/comments?page=/b")).json.length, 0);
-  assert.equal((await call(h, "GET", "/api/comments")).json.length, 1);
+  assert.equal((await call(h, "GET", "/api/comments")).status, 403);
+  assert.equal((await call(h, "GET", "/api/comments", undefined, { authorization: "Bearer tok" })).json.length, 1);
 });
 
 test("unknown thread is a 404; a malformed id never reaches storage", async () => {
   const h = make();
   assert.equal((await call(h, "PATCH", "/api/comments/abcdef123", { resolved: true })).status, 404);
   assert.equal((await call(h, "PATCH", "/api/comments/..%2F..%2Fetc", { resolved: true })).status, 404);
+  assert.equal((await call(h, "GET", "/api/comments/%E0%A4%A")).status, 400);
 });
 
 test("pins: kept, and validated", async () => {
@@ -71,7 +73,7 @@ test("clear removes everything", async () => {
   await call(h, "POST", "/api/comments", { pageId: "/a", text: "1" });
   await call(h, "POST", "/api/comments", { pageId: "/a", text: "2" });
   await call(h, "DELETE", "/api/comments", undefined, { authorization: "Bearer tok" });
-  assert.equal((await call(h, "GET", "/api/comments")).json.length, 0);
+  assert.equal((await call(h, "GET", "/api/comments", undefined, { authorization: "Bearer tok" })).json.length, 0);
 });
 
 test("CORS: OPTIONS is a null-body 204, and a foreign origin is refused", async () => {
@@ -79,7 +81,7 @@ test("CORS: OPTIONS is a null-body 204, and a foreign origin is refused", async 
   assert.equal((await call(h, "OPTIONS", "/api/comments", undefined, { origin: "https://site.example" })).status, 204);
   const bad = await call(h, "POST", "/api/comments", { pageId: "/a", text: "x" }, { origin: "https://evil.example" });
   assert.equal(bad.status, 403);
-  const good = await call(h, "GET", "/api/comments", undefined, { origin: "https://site.example" });
+  const good = await call(h, "GET", "/api/comments?page=/a", undefined, { origin: "https://site.example" });
   assert.equal(good.headers.get("access-control-allow-origin"), "https://site.example");
 });
 

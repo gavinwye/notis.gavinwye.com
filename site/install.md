@@ -125,7 +125,7 @@ They are kept on the user's own host: Netlify Blobs (store `COMMENTS_STORE`, def
 
 1. Open the page, select a sentence, click Add note, add a name and a note.
 2. Reload. The highlight and the note should still be there.
-3. For shared storage, `curl <site>/api/comments` returns JSON containing the comment.
+3. For shared storage, `curl "<site>/api/comments?page=<pageId>"` returns JSON containing the comment.
    If something doesn't work, the user can report it at https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml. Give them the output of `NotisVersion` in the browser console and which host they chose.
 4. Open the page in a private window. The note should be there too.
 

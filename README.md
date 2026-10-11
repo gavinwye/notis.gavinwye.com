@@ -200,7 +200,8 @@ Open an issue on GitHub: [report a bug](https://github.com/gavinwye/notis.gavinw
 
 | Request | Body | Returns |
 |---|---|---|
-| `GET /api/comments?page=<pageId>` | | `[thread, ...]` (all pages if `page` is left off) |
+| `GET /api/comments?page=<pageId>` | | `[thread, ...]` for one page |
+| `GET /api/comments` | | every thread (admin token required) |
 | `POST /api/comments` | `{ pageId, quote, prefix, suffix, author, text, pin? }` | the new thread |
 | `POST /api/comments/:id/replies` | `{ author, text }` | the new reply |
 | `PATCH /api/comments/:id` | `{ resolved }` | the updated thread |
