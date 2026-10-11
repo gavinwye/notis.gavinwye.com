@@ -2,9 +2,9 @@
 
 All notable changes to Notis. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers follow [Semantic Versioning](https://semver.org/).
 
-## [0.3.0] - unreleased
+## [0.3.0] - 2026-10-11
 
-An accessibility pass. Because the widget's source changed, this is a new version: 0.2.0 is archived and doesn't change.
+An accessibility pass, notes wording and Barlow type. Because the widget's source changed, this is a new version: 0.2.0 is archived and doesn't change.
 
 ### Added
 - **Keyboard route to commenting:** select text with Shift + arrow keys and press Alt+Shift+C, or use **Comment on selection** in the panel. Screen readers are told the shortcut when text is selected. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
@@ -15,6 +15,8 @@ An accessibility pass. Because the widget's source changed, this is a new versio
 - `scripts/check-a11y.mjs`, a browser check for keyboard use, announcements, contrast, target size, reduced motion, forced colours and zoom. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
 
 ### Changed
+- **Text fields** are white with a black border, and the focused field gets a thick yellow bar along its bottom edge. (Phones and tablets keep the two-step sheet from 0.2.0.)
+- **The Notis site** has a hamburger menu on phones, a sticky header, Barlow type and the pronunciation (noh-tis).
 - **Fonts:** the widget no longer forces Figtree. It uses `--notis-font` if the page sets it, then Barlow, then the system font, and it loads no font of its own. Bold labels use weight 600, so a page that serves Barlow 400/500/600 doesn't get a synthesised bold.
 - **The Notis site** now sets its type in Barlow and Barlow Semi Condensed, the family gavinwye.com uses, served from its own files with no request to Google Fonts. The share image, screenshots and demo form use the same fonts.
 - **Notes, not comments, on screen.** The button, panel, note box, announcements and errors now say Notes, Add a note and so on. A new `noun` option (`data-noun`) sets the word: `noun: "comment"` gives Comments and Add a comment again. File names, the API (`/api/comments`), events (`comments:*`) and settings (`COMMENTS_*`) are unchanged.
