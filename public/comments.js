@@ -54,7 +54,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "0.3.0";
+  var VERSION = "0.3.1";
   window.NotisVersion = VERSION; // quote this when reporting a bug
   var script = document.currentScript;
   function dataAttr(name) { return script ? script.getAttribute(name) : null; }

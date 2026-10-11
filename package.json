@@ -1,6 +1,6 @@
 {
   "name": "@gavinwye/notis",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Select text on any page and leave a shared, threaded comment on it. One script, one small serverless function.",
   "type": "module",
   "license": "MIT",

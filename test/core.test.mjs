@@ -35,13 +35,41 @@ test("reply, resolve and list by page", async () => {
   assert.equal(r.json.replies.length, 1);
   assert.equal((await call(h, "GET", "/api/comments?page=/a")).json.length, 1);
   assert.equal((await call(h, "GET", "/api/comments?page=/b")).json.length, 0);
-  assert.equal((await call(h, "GET", "/api/comments")).json.length, 1);
+  assert.equal((await call(h, "GET", "/api/comments")).status, 403);
+  assert.equal((await call(h, "GET", "/api/comments", undefined, { authorization: "Bearer tok" })).json.length, 1);
+});
+
+test("concurrent replies are not lost", async () => {
+  const h = make({ duplicateWindowMs: 1 });
+  const t = (await call(h, "POST", "/api/comments", { pageId: "/a", text: "hi" })).json;
+  const replies = await Promise.all(Array.from({ length: 25 }, (_, i) =>
+    call(h, "POST", `/api/comments/${t.id}/replies`, { text: `reply ${i}` })
+  ));
+  assert.ok(replies.every((reply) => reply.status === 201));
+  const [saved] = (await call(h, "GET", "/api/comments?page=/a")).json;
+  assert.equal(saved.replies.length, 25);
+});
+
+test("duplicate writes and configured ceilings are enforced", async () => {
+  const h = make({ maxThreadsPerPage: 1, maxRepliesPerThread: 1 });
+  const first = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "hello" });
+  assert.equal(first.status, 201);
+  assert.equal((await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "hello" })).status, 429);
+  assert.equal((await call(h, "POST", `/api/comments/${first.json.id}/replies`, { author: "Jo", text: "reply" })).status, 201);
+  assert.equal((await call(h, "POST", `/api/comments/${first.json.id}/replies`, { author: "Jo", text: "reply" })).status, 429);
+
+  const duplicates = make({ maxThreadsPerPage: 5, maxRepliesPerThread: 5 });
+  const thread = (await call(duplicates, "POST", "/api/comments", { pageId: "/b", author: "Sam", text: "same" })).json;
+  assert.equal((await call(duplicates, "POST", "/api/comments", { pageId: "/b", author: "Sam", text: "same" })).status, 409);
+  await call(duplicates, "POST", `/api/comments/${thread.id}/replies`, { author: "Jo", text: "same" });
+  assert.equal((await call(duplicates, "POST", `/api/comments/${thread.id}/replies`, { author: "Jo", text: "same" })).status, 409);
 });
 
 test("unknown thread is a 404; a malformed id never reaches storage", async () => {
   const h = make();
   assert.equal((await call(h, "PATCH", "/api/comments/abcdef123", { resolved: true })).status, 404);
   assert.equal((await call(h, "PATCH", "/api/comments/..%2F..%2Fetc", { resolved: true })).status, 404);
+  assert.equal((await call(h, "GET", "/api/comments/%E0%A4%A")).status, 400);
 });
 
 test("pins: kept, and validated", async () => {
@@ -71,7 +99,7 @@ test("clear removes everything", async () => {
   await call(h, "POST", "/api/comments", { pageId: "/a", text: "1" });
   await call(h, "POST", "/api/comments", { pageId: "/a", text: "2" });
   await call(h, "DELETE", "/api/comments", undefined, { authorization: "Bearer tok" });
-  assert.equal((await call(h, "GET", "/api/comments")).json.length, 0);
+  assert.equal((await call(h, "GET", "/api/comments", undefined, { authorization: "Bearer tok" })).json.length, 0);
 });
 
 test("CORS: OPTIONS is a null-body 204, and a foreign origin is refused", async () => {
@@ -79,7 +107,7 @@ test("CORS: OPTIONS is a null-body 204, and a foreign origin is refused", async 
   assert.equal((await call(h, "OPTIONS", "/api/comments", undefined, { origin: "https://site.example" })).status, 204);
   const bad = await call(h, "POST", "/api/comments", { pageId: "/a", text: "x" }, { origin: "https://evil.example" });
   assert.equal(bad.status, 403);
-  const good = await call(h, "GET", "/api/comments", undefined, { origin: "https://site.example" });
+  const good = await call(h, "GET", "/api/comments?page=/a", undefined, { origin: "https://site.example" });
   assert.equal(good.headers.get("access-control-allow-origin"), "https://site.example");
 });
 
@@ -93,4 +121,56 @@ test("oversized and invalid bodies", async () => {
 
 test("other paths are not ours", async () => {
   assert.equal((await call(make(), "GET", "/somewhere/else")).status, 404);
+});
+
+test("the same remark on different words is not a duplicate; on the same words it is", async () => {
+  const h = make();
+  const a = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "Needs a source", quote: "first claim" });
+  const b = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "Needs a source", quote: "second claim" });
+  const c = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "Needs a source", quote: "first claim" });
+  assert.deepEqual([a.status, b.status, c.status], [201, 201, 409]);
+  // pins on different spots of the same image are different too
+  const pin = (x) => ({ src: "x.svg", alt: "", i: 0, x, y: 0.5 });
+  const p1 = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "Here", pin: pin(0.1) });
+  const p2 = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "Here", pin: pin(0.9) });
+  const p3 = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "Here", pin: pin(0.1) });
+  assert.deepEqual([p1.status, p2.status, p3.status], [201, 201, 409]);
+});
+
+test("duplicateWindowMs: 0 turns the duplicate check off", async () => {
+  const h = make({ duplicateWindowMs: 0 });
+  const one = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "same" });
+  const two = await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "same" });
+  assert.deepEqual([one.status, two.status], [201, 201]);
+  // a junk setting keeps the default rather than disabling it
+  const junk = make({ duplicateWindowMs: "soon" });
+  await call(junk, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "same" });
+  assert.equal((await call(junk, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "same" })).status, 409);
+});
+
+test("combined: concurrent replies and creates under the ceilings, and export still needs the token", async () => {
+  const h = make({ maxThreadsPerPage: 10, maxRepliesPerThread: 30 });
+  const t = (await call(h, "POST", "/api/comments", { pageId: "/a", author: "Sam", text: "root" })).json;
+  const replies = await Promise.all(Array.from({ length: 30 }, (_, i) =>
+    call(h, "POST", `/api/comments/${t.id}/replies`, { author: "Jo", text: `reply ${i}` })));
+  assert.ok(replies.every((r) => r.status === 201), "all 30 replies fit and none is lost");
+  assert.equal((await call(h, "POST", `/api/comments/${t.id}/replies`, { author: "Jo", text: "one too many" })).status, 429);
+  // resolving while writes are in flight keeps the replies
+  const mixed = await Promise.all([
+    call(h, "PATCH", `/api/comments/${t.id}`, { resolved: true }),
+    call(h, "PATCH", `/api/comments/${t.id}`, { resolved: false }),
+  ]);
+  assert.ok(mixed.every((r) => r.status === 200));
+  const saved = (await call(h, "GET", "/api/comments?page=/a")).json[0];
+  assert.equal(saved.replies.length, 30);
+  // creates racing to the page ceiling: exactly the allowed number get in
+  const creates = await Promise.all(Array.from({ length: 15 }, (_, i) =>
+    call(h, "POST", "/api/comments", { pageId: "/b", author: "Sam", text: `note ${i}` })));
+  assert.equal(creates.filter((r) => r.status === 201).length, 10);
+  assert.equal(creates.filter((r) => r.status === 429).length, 5);
+  // the full export is admin only, the per-page read is public, and a bad escape is a 400
+  assert.equal((await call(h, "GET", "/api/comments")).status, 403);
+  assert.equal((await call(h, "GET", "/api/comments?page=/b")).json.length, 10);
+  assert.equal((await call(h, "GET", "/api/comments", undefined, { authorization: "Bearer tok" })).json.length, 11);
+  assert.equal((await call(h, "GET", "/api/comments/%E0%A4%A", undefined, { authorization: "Bearer tok" })).status, 400);
 });
