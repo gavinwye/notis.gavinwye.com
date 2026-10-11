@@ -375,7 +375,7 @@
       '.cmt-msg{margin:6px 0}.cmt-meta{font-size:12px;color:#505a5f}.cmt-body{font-size:15px;margin:2px 0;white-space:pre-wrap;word-wrap:break-word}' +
       '.cmt-actions{display:flex;gap:10px;margin-top:6px}' +
       '.cmt-actions button{background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline #ffc726 2px;text-underline-offset:3px}' +
-      '.cmt-reply{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmt-reply input{flex:1 1 100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;outline:0}.cmt-reply input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-reply input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-reply textarea{flex:1;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
+      '.cmt-reply{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmt-reply input{flex:1 1 100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;outline:0}.cmt-reply input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-reply input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-reply textarea{flex:1;min-width:0;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
       '.cmt-btn{background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer}.cmt-btn:hover{background:#ffd94d}' +
       '.cmt-selbtn{position:absolute;z-index:9002;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}' +
       '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:2px solid #0b0c0c;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
@@ -389,6 +389,30 @@
       '.cmt-head .cmt-pinbtn{background:#0b0c0c;color:#fff;border:0;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}.cmt-head .cmt-pinbtn.cmt-on{background:#fff;color:#0b0c0c;box-shadow:inset 0 0 0 2px #0b0c0c}' +
       '.cmt-selbar{position:fixed;left:12px;right:12px;bottom:12px;z-index:9004;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:14px 16px;font:700 17px/1.2 "Figtree",arial,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}' +
       '.cmt-selbar:active{background:#ffd94d}' +
+      // Phones and narrow screens: the panel is a full-width sheet that never overflows.
+      '@media (pointer:coarse){.cmt-panel input[type=text],.cmt-panel textarea,.cmt-composer input,.cmt-composer textarea{font-size:16px}}' +
+      '@media (max-width:600px),(pointer:coarse) and (max-width:900px){' +
+        '.cmt-panel{left:0;right:0;width:100%;max-width:100%;border-left:0;overflow-x:hidden;box-shadow:none;height:100vh;height:100dvh;overscroll-behavior:contain}' +
+        '.cmt-panel *{min-width:0;box-sizing:border-box}' +
+        '.cmt-head{padding:6px 8px 6px 16px;gap:8px}' +
+        '.cmt-head h2{flex:1;min-width:0}' +
+        '.cmt-head button{min-width:44px;min-height:44px}' +
+        '.cmt-head .cmt-pinbtn{padding:0 12px;font-size:15px}' +
+        '.cmt-sub{padding:0 8px 0 16px;font-size:16px;min-height:44px}' +
+        '.cmt-sub input{width:22px;height:22px;margin:0 10px 0 0;flex:none}' +
+        '.cmt-sub label{flex:1;display:flex;align-items:center;min-height:44px;cursor:pointer}' +
+        '.cmt-list{overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 0 24px}' +
+        '.cmt-thread{padding:14px 16px}' +
+        '.cmt-quote,.cmt-body,.cmt-meta{overflow-wrap:anywhere;word-break:break-word}' +
+        '.cmt-quote{font-size:14px}.cmt-body{font-size:16px}.cmt-meta{font-size:13px}' +
+        '.cmt-actions{gap:4px;margin-top:4px}' +
+        '.cmt-actions button{min-height:44px;min-width:44px;padding:0 12px 0 0;font-size:15px;text-align:left}' +
+        '.cmt-reply{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:8px;margin-top:6px}' +
+        '.cmt-reply input,.cmt-reply textarea{flex:none;width:100%;min-height:48px;font-size:16px;padding:12px}' +
+        '.cmt-reply textarea{min-height:88px}' +
+        '.cmt-reply .cmt-btn,.cmt-reply .cmt-cancel{width:100%;min-height:48px;font-size:16px}' +
+        '.cmt-reply .cmt-cancel{background:none;border:2px solid transparent;color:#505a5f;font-weight:700;cursor:pointer}' +
+      '}' +
       'html.cmt-selecting .cmt-toggle{display:none}' +
       '.cmt-composer.cmt-sheet{position:fixed;top:auto;left:0;right:0;bottom:0;width:auto;max-height:85vh;overflow:auto;border-width:2px 0 0;padding:14px 16px 18px;box-shadow:0 -4px 16px rgba(0,0,0,.25);z-index:9005}' +
       '.cmt-composer.cmt-sheet input,.cmt-composer.cmt-sheet textarea{font-size:16px}' +
@@ -434,6 +458,11 @@
     listEl = el('div', 'cmt-list');
     panel.appendChild(head); panel.appendChild(sub); panel.appendChild(listEl);
     document.body.appendChild(panel);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', fitPanel);
+      window.visualViewport.addEventListener('scroll', fitPanel);
+    }
+    window.addEventListener('resize', fitPanel);
 
     document.addEventListener('mouseup', function () { mouseIsDown = false; scheduleSelect(1); });
     document.addEventListener('keyup', function () { scheduleSelect(1); });
@@ -444,12 +473,28 @@
   }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; e.setAttribute && e.setAttribute('data-cmt', e.getAttribute('data-cmt') || 'ui'); return e; }
 
+  function isCompact() {
+    try { return window.matchMedia('(max-width:600px)').matches || (isTouch() && window.matchMedia('(max-width:900px)').matches); } catch (e) { return false; }
+  }
+  // On a phone the panel is sized to what is actually visible, so the keyboard
+  // never covers the reply box: 100vh on iOS includes the part under it.
+  function fitPanel() {
+    if (!panel) return;
+    var vv = window.visualViewport;
+    if (!isCompact() || !vv) { panel.style.top = ''; panel.style.height = ''; return; }
+    panel.style.top = vv.offsetTop + 'px';
+    panel.style.height = vv.height + 'px';
+    var a = document.activeElement;
+    if (a && panel.contains(a) && a.scrollIntoView) { try { a.scrollIntoView({ block: 'nearest' }); } catch (e) { /* old browser */ } }
+  }
   function openPanel() {
     panel.classList.add('cmt-open');
+    fitPanel();
     if (COMMENTS_CONFIG.dock) { document.documentElement.classList.add('cmt-docked'); remember('comments:open', '1'); }
   }
   function closePanel() {
     panel.classList.remove('cmt-open');
+    if (document.activeElement && panel.contains(document.activeElement)) document.activeElement.blur();
     if (COMMENTS_CONFIG.dock) { document.documentElement.classList.remove('cmt-docked'); remember('comments:open', '0'); }
     emit('comments:close');
   }
@@ -510,7 +555,17 @@
       nameIn.addEventListener('click', function (e) { e.stopPropagation(); });
       wrap.appendChild(nameIn);
     }
-    wrap.appendChild(ta); wrap.appendChild(send); box.appendChild(wrap); (nameIn || ta).focus();
+    wrap.appendChild(ta); wrap.appendChild(send);
+    if (isCompact()) {
+      var cancelReply = el('button', 'cmt-cancel', 'Cancel'); cancelReply.type = 'button';
+      cancelReply.addEventListener('click', function (e) { e.stopPropagation(); wrap.remove(); });
+      wrap.appendChild(cancelReply);
+    }
+    box.appendChild(wrap);
+    var first = nameIn || ta;
+    try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); }
+    // Show the whole reply box (including Post) in the visible part of the list.
+    try { wrap.scrollIntoView({ block: 'end' }); } catch (e) { /* old browser */ }
   }
   function markActive(id) {
     listEl.querySelectorAll('.cmt-thread.cmt-active').forEach(function (b) { b.classList.remove('cmt-active'); });
