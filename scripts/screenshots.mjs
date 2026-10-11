@@ -96,7 +96,7 @@ await page.waitForTimeout(500);
 await page.screenshot({ path: join(out, "panel.png") });
 
 // 3. The pin on the image, with the panel closed.
-await page.click(".cmt-head [aria-label=\"Close comments\"]");
+await page.click(".cmt-head [aria-label=\"Close notes\"]");
 await page.waitForTimeout(400);
 await img.scrollIntoViewIfNeeded();
 await page.evaluate(() => { const el = document.querySelector("img[alt^='Wireframe']"); el.scrollIntoView({ block: "center" }); });

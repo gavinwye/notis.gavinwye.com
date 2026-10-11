@@ -29,7 +29,7 @@ const FIXTURE = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>fixture</title></head><body><main>
 <h1>Review a page</h1>
 <p><a id="lnk" href="#p3">Skip to the end</a></p>
-<p id="p1">Select text on any page and say what you think of it. The comment stays attached to those words.</p>
+<p id="p1">Select text on any page and say what you think of it. The note stays attached to those words.</p>
 <p id="p2">Notice that page appears here, and the word think appears again: think twice about page layout.</p>
 <img id="im" src="${IMG}" alt="Grey box" width="240" height="120">
 <p id="p3">The end of the page: say what you think.</p>
@@ -104,7 +104,7 @@ section("Keyboard only: select, comment, reply, resolve, go to text");
     const c = document.querySelector(".cmt-composer");
     return c ? { role: c.getAttribute("role"), label: c.getAttribute("aria-label"), focusInside: c.contains(document.activeElement), focus: document.activeElement.id } : null;
   });
-  ok(dlg && dlg.role === "dialog" && dlg.label === "Add a comment", "Alt+Shift+C opens the comment box as a labelled dialog", JSON.stringify(dlg));
+  ok(dlg && dlg.role === "dialog" && dlg.label === "Add a note", "Alt+Shift+C opens the note box as a labelled dialog", JSON.stringify(dlg));
   ok(dlg && dlg.focusInside, "focus moves into the comment box", dlg && dlg.focus);
 
   // Tab order and trap: name -> comment -> Cancel -> Comment -> back to name.
@@ -113,7 +113,7 @@ section("Keyboard only: select, comment, reply, resolve, go to text");
   ok((await active(page)).id === "cmt-new", "Tab goes from name to comment");
   await page.keyboard.type("Reads clearly to me.");
   await page.keyboard.press("Tab"); await page.keyboard.press("Tab");
-  ok((await active(page)).text === "Comment", "Tab reaches the Comment button");
+  ok((await active(page)).text === "Add note", "Tab reaches the Add note button");
   await page.keyboard.press("Tab");
   ok((await active(page)).id === "cmt-name", "Tab wraps inside the dialog (focus is trapped)");
 
@@ -131,7 +131,7 @@ section("Keyboard only: select, comment, reply, resolve, go to text");
   await page.keyboard.type("Reads clearly to me.");
   await page.keyboard.press("Tab"); await page.keyboard.press("Tab");
   await page.keyboard.press("Enter"); await settle(page, 500);
-  ok(/Comment added/.test(await live(page)), "posting announces “Comment added”", await live(page));
+  ok(/Note added/.test(await live(page)), "posting announces “Note added”", await live(page));
   const after = await page.evaluate(() => {
     const a = document.activeElement, li = a.closest(".cmt-thread");
     const lab = li && document.getElementById(li.getAttribute("aria-labelledby"));
@@ -185,8 +185,8 @@ section("Keyboard only: select, comment, reply, resolve, go to text");
   ok(await page.evaluate(() => document.activeElement.classList.contains("cmt-toggle") || document.activeElement.id === "lnk"), "focus goes back to where it came from");
   // The toggle announces the count when the panel opens.
   await page.locator(".cmt-toggle").focus(); await page.keyboard.press("Enter"); await settle(page, 300);
-  ok(/1 comment, 0 unresolved/.test(await live(page)), "opening the panel announces the counts", await live(page));
-  ok((await page.evaluate(() => document.querySelector(".cmt-toggle").getAttribute("aria-expanded"))) === "true", "the Comments button reports aria-expanded");
+  ok(/1 note, 0 unresolved/.test(await live(page)), "opening the panel announces the counts", await live(page));
+  ok((await page.evaluate(() => document.querySelector(".cmt-toggle").getAttribute("aria-expanded"))) === "true", "the Notes button reports aria-expanded");
   ok(page.errors.length === 0, "no page errors", page.errors.join("; "));
   await page.context().close();
 }
@@ -207,7 +207,7 @@ section("Keyboard only: pin an image");
   await page.keyboard.type("Sam"); await page.keyboard.press("Tab"); await page.keyboard.type("Move this up.");
   await page.keyboard.press("Tab"); await page.keyboard.press("Tab"); await page.keyboard.press("Enter"); await settle(page, 500);
   const pin = await page.evaluate(() => { const b = document.querySelector(".cmt-pin"); return b ? { tag: b.tagName, name: b.getAttribute("aria-label"), text: b.textContent } : null; });
-  ok(pin && pin.tag === "BUTTON" && /Comment 1 on Grey box/.test(pin.name), "the pin is a real button with a name", JSON.stringify(pin));
+  ok(pin && pin.tag === "BUTTON" && /Note 1 on Grey box/.test(pin.name), "the pin is a real button with a name", JSON.stringify(pin));
   await page.context().close();
 }
 
@@ -345,6 +345,30 @@ section("Phone: modal sheet and target sizes");
   for (let i = 0; i < 8; i++) { await page.keyboard.press("Tab"); if (!(await page.evaluate(() => !!document.activeElement.closest(".cmt-panel")))) leaked = true; }
   ok(!leaked, "Tab stays inside the modal panel");
   await page.context().close();
+}
+
+// ---------------------------------------------------------------- wording
+section("Wording: the default is note, and noun: \"comment\" gives the old words");
+{
+  const page = await open();
+  const t = await page.evaluate(() => ({ toggle: document.querySelector(".cmt-toggle").textContent, title: document.querySelector("#cmt-title").textContent, sel: document.querySelector(".cmt-selpanel").textContent, list: document.querySelector(".cmt-list").getAttribute("aria-label"), close: document.querySelector(".cmt-close").getAttribute("aria-label") }));
+  ok(t.toggle === "Notes" && t.title === "Notes", "default: the button and panel say Notes", JSON.stringify(t));
+  ok(t.sel === "Add note on selection" && t.list === "Notes on this page" && t.close === "Close notes", "default: panel actions and labels say note", JSON.stringify(t));
+  await page.context().close();
+
+  await writeFile(join(dir, "noun.html"), FIXTURE.replace('{apiBase:null,pageId:"fixture"}', '{apiBase:null,pageId:"fixture-noun",noun:"comment"}'));
+  const ctx = await browser.newContext({ viewport: { width: 1100, height: 800 } });
+  const p2 = await ctx.newPage();
+  await p2.goto(pathToFileURL(join(dir, "noun.html")).href);
+  await p2.waitForSelector(".cmt-toggle", { state: "attached" });
+  const c = await p2.evaluate(() => ({ toggle: document.querySelector(".cmt-toggle").textContent, title: document.querySelector("#cmt-title").textContent, sel: document.querySelector(".cmt-selpanel").textContent, close: document.querySelector(".cmt-close").getAttribute("aria-label"), empty: document.querySelector(".cmt-empty").textContent }));
+  ok(c.toggle === "Comments" && c.title === "Comments", "noun comment: the button and panel say Comments", JSON.stringify(c));
+  ok(c.sel === "Add comment on selection" && c.close === "Close comments" && /^No comments yet/.test(c.empty), "noun comment: panel actions and empty state say comment", JSON.stringify(c));
+  await selectWithKeys(p2, "#p1", 20);
+  await p2.keyboard.press("Alt+Shift+C"); await settle(p2, 250);
+  const label = await p2.evaluate(() => { const d = document.querySelector(".cmt-composer"); return d ? d.getAttribute("aria-label") : null; });
+  ok(label === "Add a comment", "noun comment: the box is labelled Add a comment", String(label));
+  await ctx.close();
 }
 
 // ---------------------------------------------------------------- axe-core (optional)

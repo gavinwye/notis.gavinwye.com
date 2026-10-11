@@ -10,7 +10,7 @@ It's one script on the page and one small serverless function behind it. No acco
 
 ## Why it exists
 
-Reviewing a prototype by email means vague notes: "the second paragraph feels off". Here the reviewer selects the words they mean and says what's wrong with them. The comment stays attached to those words, and you can see all of them in one place.
+Reviewing a prototype by email means vague notes: "the second paragraph feels off". Here the reviewer selects the words they mean and says what's wrong with them. The note stays attached to those words, and you can see all of them in one place.
 
 It was built to get fast reactions to early prototypes.
 
@@ -19,19 +19,19 @@ It was built to get fast reactions to early prototypes.
 - **Notes on the exact words.** Select text, leave a note. The highlight stays on that text if the page changes slightly.
 - **Pins on images.** Choose Pin on image in the panel and click the spot you mean. The pin stays at that point when the image is resized.
 - **Threads.** Replies, resolve and reopen, and a toggle to show resolved ones.
-- **Shared.** Everyone who opens the page sees the same comments.
-- **A JSON API.** A script (or an AI assistant) can read the open comments and work through them. See [Closing the loop](#closing-the-loop).
+- **Shared.** Everyone who opens the page sees the same notes.
+- **A JSON API.** A script (or an AI assistant) can read the open notes and work through them. See [Closing the loop](#closing-the-loop).
 - **One file in, one file out.** `comments.js` has no dependencies and injects its own styles.
 
 ## What it looks like
 
-![A comment box open on a paragraph, with a name and a comment typed in](docs/images/comment-box.png)
+![A note box open on a paragraph, with a name and a note typed in](docs/images/comment-box.png)
 
-The comment box asks for a name once, then the comment.
+The note box asks for a name once, then the note.
 
-![The side panel listing three comments, one of them a pin on an image](docs/images/panel.png)
+![The side panel listing three notes, one of them a pin on an image](docs/images/panel.png)
 
-Every comment is in one list, in the order it appears on the page.
+Every note is in one list, in the order it appears on the page.
 
 ![A round numbered pin on the Continue button of a wireframe](docs/images/pin.png)
 
@@ -46,7 +46,7 @@ npm install
 npx netlify dev        # http://localhost:8888
 ```
 
-Open the page, select some text, and comment. You need the [Netlify CLI](https://docs.netlify.com/cli/get-started/) and `netlify login`.
+Open the page, select some text, and leave a note. You need the [Netlify CLI](https://docs.netlify.com/cli/get-started/) and `netlify login`.
 
 ## Ask an agent to add it
 
@@ -95,16 +95,17 @@ Set them with a global before the script, or with `data-*` attributes on the tag
 
 | Option | Default | What it does |
 |---|---|---|
-| `apiBase` | `"/api"` | Where the API lives. Set `null` to keep comments in this browser only (not shared). |
+| `apiBase` | `"/api"` | Where the API lives. Set `null` to keep notes in this browser only (not shared). |
 | `pageId` | the URL path | The thread list for this page. Pages with the same `pageId` share threads. |
-| `root` | `"body"` | CSS selector for the region people can comment on. |
+| `root` | `"body"` | CSS selector for the region people can leave notes on. |
 | `pins` | `true` | Let reviewers drop a pin on an image. Set `false` to turn it off. |
+| `noun` | `"note"` | What things left on the page are called on screen: Notes, Add a note, and so on. Set `"comment"` to get Comments and Add a comment. |
 | `dock` | `false` | Push the page over to make room for the panel, rather than covering it. |
 | `supabase` | `null` | `{ url, anonKey }` to use Supabase instead of the Netlify function. |
 
 ### Events
 
-The widget fires events on `document`, so a page can react to a comment, for example by highlighting the column the text sits in.
+The widget fires events on `document`, so a page can react to a note, for example by highlighting the column the text sits in.
 
 | Event | `detail` | When |
 |---|---|---|
@@ -119,7 +120,7 @@ The widget fires events on `document`, so a page can react to a comment, for exa
 
 The API is one small piece of code that talks to a storage object, with a short adapter for each host. Pick the one you already use:
 
-| Host | File | Comments are kept in | Notes |
+| Host | File | Kept in | Notes |
 |---|---|---|---|
 | **Netlify** | [`server/netlify.mjs`](server/netlify.mjs) | Netlify Blobs, in your account | Drop it in `netlify/functions/comments.mjs`, `npm i @netlify/blobs` |
 | **Cloudflare Workers** | [`server/cloudflare.mjs`](server/cloudflare.mjs) | a Workers KV namespace bound as `COMMENTS` | Route `your-site/api/comments*` to the Worker |
@@ -164,16 +165,16 @@ If it's on a different address from your site, give the widget the full URL (`ap
 | `COMMENTS_DIR` | `./comments-data` | Node only: where the files go. |
 | `PORT` | `8787` | Node only. |
 
-Each thread is stored on its own, so two reviewers commenting at the same moment don't overwrite each other.
+Each thread is stored on its own, so two reviewers adding notes at the same moment don't overwrite each other.
 
-## Where your comments live
+## Where your notes live
 
 On your own host, in your own account. On Netlify that's a [Netlify Blobs](https://docs.netlify.com/blobs/overview/) store (named `comments`, or whatever `COMMENTS_STORE` says), one blob per thread under `t/<id>`. On Cloudflare it's your KV namespace, and on Node it's a folder of JSON files. Nobody else holds a copy: there is no central Notis service, and the Notis site never sees your comments.
 
 - **One store for the whole site.** Production and deploy previews share it. A comment left on a preview also shows on any page with the same `pageId` in production. Use a different `COMMENTS_STORE` per site, and give previews their own `pageId` if you don't want that.
 - **Export or back up:** `curl -H "Authorization: Bearer $COMMENTS_ADMIN_TOKEN" https://your-site/api/comments > comments-backup.json` works on any host. On Netlify you can also use `netlify blobs:list comments`.
-- **Read them while running locally:** `netlify dev` uses a local sandbox, so comments left there don't reach your live site.
-- **The demo is different.** With `apiBase: null` (as on the Notis site), comments stay in each visitor's browser and are never sent anywhere.
+- **Read them while running locally:** `netlify dev` uses a local sandbox, so notes left there don't reach your live site.
+- **The demo is different.** With `apiBase: null` (as on the Notis site), notes stay in each visitor's browser and are never sent anywhere.
 
 ### Analytics
 
@@ -226,14 +227,14 @@ curl -X DELETE -H "Authorization: Bearer $COMMENTS_ADMIN_TOKEN" \
 
 ## Closing the loop
 
-Comments are plain JSON, so the person (or assistant) fixing the page can read them directly:
+Notes are plain JSON, so the person (or assistant) fixing the page can read them directly:
 
 ```bash
 curl -s "https://your-site.netlify.app/api/comments?page=/some/page" \
   | jq '.[] | select(.resolved|not) | {quote, text}'
 ```
 
-Each open comment gives you the words it points at and what was said about them. Fix the page, then `PATCH` the thread with `{"resolved": true}`. We use this with Claude: it reads the open comments, makes the edits, and marks them resolved.
+Each open note gives you the words it points at and what was said about them. Fix the page, then `PATCH` the thread with `{"resolved": true}`. We use this with Claude: it reads the open notes, makes the edits, and marks them resolved.
 
 ## Keyboard and screen readers
 
@@ -241,34 +242,34 @@ Everything works without a mouse.
 
 | Do this | With the keyboard |
 |---|---|
-| Comment on text | Select it (Shift + arrow keys), then press **Alt+Shift+C**. Or open the panel and choose **Comment on selection** |
-| Open or close the panel | Tab to **Comments** and press Enter. **Esc** closes it |
+| Add a note on text | Select it (Shift + arrow keys), then press **Alt+Shift+C**. Or open the panel and choose **Add note on selection** |
+| Open or close the panel | Tab to **Notes** and press Enter. **Esc** closes it |
 | Pin an image | Panel, **Pin on image**, Tab to an image, arrow keys move the pin (Shift for small steps), **Enter** drops it |
-| Find a comment's words | **Go to text** in the panel moves focus to the highlight |
-| Back out | **Esc** closes the innermost thing first: the reply box or comment box, then pin mode, then the panel |
+| Find a note's words | **Go to text** in the panel moves focus to the highlight |
+| Back out | **Esc** closes the innermost thing first: the reply box or note box, then pin mode, then the panel |
 
 What it does for assistive technology:
 
 - The panel is a labelled region, and a modal dialog on phones. The closed panel can't be reached with Tab.
-- Comments are a list. Each is named by the words it's about, and each button says which comment it acts on.
-- A live region announces "Comment added", "Reply added", "Thread resolved", how many comments are unresolved when the panel opens, and errors, with a Retry button.
-- Focus moves into the comment box when it opens and goes back to where it was when it closes.
+- Notes are a list. Each is named by the words it's about, and each button says which note it acts on.
+- A live region announces "Note added", "Reply added", "Thread resolved", how many notes are unresolved when the panel opens, and errors, with a Retry button.
+- Focus moves into the note box when it opens and goes back to where it was when it closes.
 - Contrast meets WCAG 2.2 AA, focus is always a heavy ring, controls are at least 24 px (44 px on touch), motion stops with `prefers-reduced-motion`, and highlights and buttons keep a border in forced-colours mode.
 
 `node scripts/check-a11y.mjs` checks these in a browser (it can also run axe-core). It can't replace testing with a screen reader, and VoiceOver, NVDA and TalkBack haven't been run against it yet. If something is in the way, [report it](https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml).
 
-## How comments stay attached
+## How notes stay attached
 
-Each comment stores the selected text plus up to 32 characters either side (the W3C text-quote approach). When the page loads, the widget finds that text again and highlights it. If the words have been edited, the comment stays in the panel with a note that the text has changed.
+Each note stores the selected text plus up to 32 characters either side (the W3C text-quote approach). When the page loads, the widget finds that text again and highlights it. If the words have been edited, the note stays in the panel with a notice that the text has changed.
 
 ## What it doesn't do
 
 Worth knowing before you rely on it.
 
-- **No sign-in.** Anyone who can load the page can comment, under whatever name they type. Put the page behind a password or a Netlify preview, as you would for any review copy.
+- **No sign-in.** Anyone who can load the page can leave a note, under whatever name they type. Put the page behind a password or a Netlify preview, as you would for any review copy.
 - **No notifications.** Nobody is emailed. You look at the panel, or read the API.
 - **Not for high traffic.** It's built for a handful of reviewers, not for a public comment section.
-- **Text that moves a lot loses its anchor.** The comment survives; the highlight doesn't.
+- **Text that moves a lot loses its anchor.** The note survives; the highlight doesn't.
 - **Pins are for `<img>` elements.** Not CSS backgrounds or inline SVG. A pin finds its image by `src`, so if the image changes, the pin is shown as lost.
 - **Pins need the Netlify function or localStorage.** The Supabase adapter would need a `pin` column.
 
