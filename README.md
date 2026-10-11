@@ -303,3 +303,5 @@ MIT. See [LICENSE](LICENSE).
 ### Fonts
 
 The Notis site is set in [Barlow](https://github.com/jpt/barlow) and Barlow Semi Condensed by Jeremy Tribby, the same family gavinwye.com uses. They're licensed under the SIL Open Font License 1.1 (see `site/fonts/OFL.txt`) and served from this site's own files, so visiting it makes no request to Google Fonts.
+
+The example wireframe (`site/demo-form.svg`) is drawn in [Inter](https://github.com/rsms/inter) by The Inter Project Authors, embedded in the image file, under the same licence (`site/fonts/Inter-OFL.txt`). It stands in for someone else's page, so it doesn't use the site's own type.
