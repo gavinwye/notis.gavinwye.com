@@ -52,7 +52,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "0.2.0";
+  var VERSION = "0.3.0";
   window.NotisVersion = VERSION; // quote this when reporting a bug
   var script = document.currentScript;
   function dataAttr(name) { return script ? script.getAttribute(name) : null; }
@@ -157,6 +157,15 @@
   function emit(name, detail) {
     try { document.dispatchEvent(new CustomEvent(name, { detail: detail || {} })); } catch (e) { /* old browser — events are optional */ }
   }
+  // One polite live region for the whole widget: "Comment added", counts, errors.
+  var announcer = null;
+  function announce(text) {
+    if (!announcer) return;
+    announcer.textContent = '';
+    setTimeout(function () { announcer.textContent = text; }, 60);
+  }
+  function reduceMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+  function scrollBehavior() { return reduceMotion() ? 'auto' : 'smooth'; }
   function remember(key, val) { try { localStorage.setItem(key, val); } catch (e) { /* storage blocked — not essential */ } }
   function recall(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 
@@ -367,19 +376,37 @@
       document.body.appendChild(b); pinEls.push(b);
     });
   }
-  var pinMode = false, pinHint = null, pinBtn = null;
+  var pinMode = false, pinHint = null, pinBtn = null, pinTabbed = [], pinGhost = null, pinAt = { x: 0.5, y: 0.5 };
   function setPinMode(on) {
     pinMode = !!on;
     document.documentElement.classList.toggle("cmt-pinning", pinMode);
     if (pinBtn) { pinBtn.setAttribute("aria-pressed", pinMode ? "true" : "false"); pinBtn.classList.toggle("cmt-on", pinMode); }
     if (pinHint) { pinHint.remove(); pinHint = null; }
+    if (pinGhost) { pinGhost.remove(); pinGhost = null; }
+    pinTabbed.forEach(function (im) { im.removeAttribute("tabindex"); im.removeAttribute("aria-description"); });
+    pinTabbed = [];
     if (pinMode) {
       removeSelBtn(); removeComposer();
-      pinHint = el("div", "cmt-pinhint", rootImages().length
-        ? "Click an image to drop a pin. Press Esc to cancel."
+      var imgs = rootImages();
+      pinHint = el("div", "cmt-pinhint", imgs.length
+        ? "Click an image to drop a pin. With the keyboard: Tab to an image, arrow keys move the pin, Enter drops it. Esc cancels."
         : "There are no images on this page to pin to.");
+      pinHint.setAttribute("role", "status");
       document.body.appendChild(pinHint);
+      // Images are not normally focusable. While pinning they are, so a keyboard can reach them.
+      imgs.forEach(function (im) {
+        if (!im.hasAttribute("tabindex")) {
+          im.setAttribute("tabindex", "0"); pinTabbed.push(im);
+          im.setAttribute("aria-description", "Pin a comment here. Arrow keys move the pin, Enter drops it.");
+        }
+      });
+      if (imgs.length) { pinAt = { x: 0.5, y: 0.5 }; if (document.activeElement === pinBtn) announce("Pin mode on. Tab to an image, use the arrow keys to move the pin, then press Enter."); }
     }
+  }
+  function dropPin(img, x, y, clientX, clientY) {
+    var pin = { src: img.getAttribute("src") || "", i: rootImages().indexOf(img), alt: img.getAttribute("alt") || "", x: x, y: y };
+    setPinMode(false);
+    openComposer({ quote: "", prefix: "", suffix: "", pin: pin }, { bottom: clientY, left: clientX });
   }
   document.addEventListener("click", function (e) {
     if (!pinMode) return;
@@ -387,16 +414,56 @@
     if (!img || img.closest("[data-cmt]") || !rootEl().contains(img)) return;
     e.preventDefault(); e.stopPropagation();
     var r = img.getBoundingClientRect();
-    var x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-    var y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
-    var pin = { src: img.getAttribute("src") || "", i: rootImages().indexOf(img), alt: img.getAttribute("alt") || "", x: x, y: y };
-    setPinMode(false);
-    openComposer({ quote: "", prefix: "", suffix: "", pin: pin }, { bottom: e.clientY, left: e.clientX });
+    // A keyboard "click" (Enter on a focused image) has no pointer position: use the centre.
+    var kb = e.detail === 0 && e.clientX === 0 && e.clientY === 0;
+    var x = kb ? 0.5 : Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    var y = kb ? 0.5 : Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    dropPin(img, x, y, kb ? r.left + r.width / 2 : e.clientX, kb ? r.top + r.height / 2 : e.clientY);
   }, true);
+  // Keyboard pinning: arrow keys move a preview marker, Enter or Space drops the pin.
   document.addEventListener("keydown", function (e) {
-    if (e.key !== "Escape") return;
-    if (pinMode) setPinMode(false);
-    else if (!composer && panel && panel.classList.contains('cmt-open')) closePanel();
+    if (!pinMode) return;
+    var img = document.activeElement;
+    if (!img || img.tagName !== "IMG" || !rootEl().contains(img)) return;
+    var step = e.shiftKey ? 0.02 : 0.1, moved = false;
+    if (e.key === "ArrowLeft") { pinAt.x = Math.max(0, pinAt.x - step); moved = true; }
+    else if (e.key === "ArrowRight") { pinAt.x = Math.min(1, pinAt.x + step); moved = true; }
+    else if (e.key === "ArrowUp") { pinAt.y = Math.max(0, pinAt.y - step); moved = true; }
+    else if (e.key === "ArrowDown") { pinAt.y = Math.min(1, pinAt.y + step); moved = true; }
+    else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      var r0 = img.getBoundingClientRect();
+      dropPin(img, pinAt.x, pinAt.y, r0.left + pinAt.x * r0.width, r0.top + pinAt.y * r0.height);
+      return;
+    }
+    if (!moved) return;
+    e.preventDefault();
+    var r = img.getBoundingClientRect();
+    if (!pinGhost) { pinGhost = el("div", "cmt-pinghost"); pinGhost.setAttribute("aria-hidden", "true"); document.body.appendChild(pinGhost); }
+    pinGhost.style.left = (window.scrollX + r.left + pinAt.x * r.width) + "px";
+    pinGhost.style.top = (window.scrollY + r.top + pinAt.y * r.height) + "px";
+    announce("Pin at " + Math.round(pinAt.x * 100) + " percent across, " + Math.round(pinAt.y * 100) + " percent down. Press Enter to drop it.");
+  });
+  // Escape closes the innermost thing first: the comment box, then pin mode, then the panel.
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      if (composer) { e.preventDefault(); cancelComposer(); return; }
+      var ae = document.activeElement, rb = ae && ae.closest ? ae.closest('.cmt-reply') : null;
+      if (rb) {
+        e.preventDefault();
+        var li = rb.closest('.cmt-thread'), again = li && li.querySelector('.cmt-actions button');
+        rb.remove(); if (again) focusEl(again);
+        return;
+      }
+      if (pinMode) { setPinMode(false); return; }
+      if (panel && panel.classList.contains('cmt-open')) { e.preventDefault(); closePanel(); }
+      return;
+    }
+    // Alt+Shift+C: comment on the current selection, without a mouse.
+    if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyC') {
+      e.preventDefault();
+      commentOnSelection();
+    }
   });
   window.addEventListener("resize", function () { renderPins(); });
   window.addEventListener("load", function () { renderPins(); });
@@ -412,26 +479,65 @@
       renderPins();
       renderPanel();
       updateCount();
+    }, function () {
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      var li = el('li', 'cmt-empty');
+      inlineError(li, 'Could not load the comments.', function () { refresh(); });
+      listEl.appendChild(li);
+      announce('Could not load the comments.');
     });
+  }
+  // A short message with a Retry button, announced to screen readers (role=alert).
+  function inlineError(parent, text, retry) {
+    Array.prototype.slice.call(parent.children).forEach(function (c) { if (c.classList && c.classList.contains('cmt-error')) c.remove(); });
+    var box = el('div', 'cmt-error'); box.setAttribute('role', 'alert');
+    var span = document.createElement('span'); span.setAttribute('data-cmt', 'ui'); span.textContent = text + ' ';
+    var b = el('button', 'cmt-link', 'Retry'); b.type = 'button';
+    b.addEventListener('click', function (e) { e.stopPropagation(); box.remove(); retry(); });
+    box.appendChild(span); box.appendChild(b); parent.appendChild(box);
+    return box;
   }
 
   /* ---------- UI ---------- */
   var toggleBtn, panel, listEl, selBtn, composer, resolvedChk;
+
+  function focusEl(node) { try { node.focus({ preventScroll: true }); } catch (e) { node.focus(); } }
+  function focusables(container) {
+    var q = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    return Array.prototype.filter.call(container.querySelectorAll(q), function (n) {
+      return n.getClientRects().length > 0 && getComputedStyle(n).visibility !== 'hidden';
+    });
+  }
+  // Keep Tab and Shift+Tab inside a dialog while it is open.
+  function trapTab(container, when) {
+    container.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab' || (when && !when())) return;
+      var f = focusables(container); if (!f.length) return;
+      var first = f[0], last = f[f.length - 1], a = document.activeElement;
+      if (e.shiftKey && (a === first || a === container)) { e.preventDefault(); focusEl(last); }
+      else if (!e.shiftKey && a === last) { e.preventDefault(); focusEl(first); }
+    });
+  }
 
   function buildUI() {
     var css = document.createElement("style");
     css.textContent =
       '[data-cmt]{box-sizing:border-box;font-family:"Figtree",arial,sans-serif;line-height:1.45;font-style:normal;letter-spacing:normal}' +
       '.cmt-panel,.cmt-composer{color:#0b0c0c;color-scheme:light}.cmt-panel .cmt-body{color:#0b0c0c}.cmt-panel label{color:#505a5f}' +
-      'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #ffc726;cursor:pointer;padding:0 1px}' +
+      // Keyboard focus is always a heavy ink ring (3:1 against yellow and white alike).
+      '[data-cmt]:focus-visible{outline:3px solid #0b0c0c !important;outline-offset:2px}' +
+      '[data-cmt][tabindex="-1"]:focus:not(:focus-visible){outline:0}' +
+      'mark.cmt-hl{font:inherit;color:#0b0c0c;background:#fff3c4;border-bottom:2px solid #946b00;cursor:pointer;padding:0 1px}' +
       'mark.cmt-hl[data-count="2"]{background:#ffe9a0;border-bottom-width:3px}mark.cmt-hl[data-count="3"],mark.cmt-hl[data-count="4"],mark.cmt-hl[data-count="5"]{background:#ffdd73;border-bottom-width:4px}' +
-      'mark.cmt-hl[data-resolved]{background:#eef0f2;border-bottom-color:#b1b4b6}' +
+      'mark.cmt-hl[data-resolved]{background:#eef0f2;border-bottom-color:#6b7478}' +
       'mark.cmt-hl.cmt-flash{animation:cmtFlash 1.2s ease}' +
       '@keyframes cmtFlash{0%,100%{background:#fff3c4}50%{background:#ffd94d}}' +
       '.cmt-toggle{position:fixed;right:16px;bottom:16px;z-index:9000;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:10px 16px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}' +
-      '.cmt-toggle:hover{background:#ffd94d}.cmt-toggle:focus-visible,.cmt-btn:focus-visible,.cmt-selbtn:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}' +
+      '.cmt-toggle:hover{background:#ffd94d}' +
       '.cmt-panel{position:fixed;top:0;right:0;height:100vh;width:360px;max-width:92vw;background:#fff;border-left:2px solid #0b0c0c;box-shadow:-2px 0 12px rgba(0,0,0,.15);z-index:9001;transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column}' +
-      '.cmt-panel.cmt-open{transform:none}' +
+      '.cmt-panel.cmt-open{transform:none}.cmt-panel:not(.cmt-open){visibility:hidden;transition:transform .2s,visibility 0s .2s}' +
+      '.cmt-panel:focus{outline:0}' +
       // Docked: the page makes room for the panel instead of sitting under it.
       'html.cmt-docked body{margin-right:360px}' +
       'html.cmt-docked .cmt-panel{box-shadow:none}' +
@@ -440,22 +546,25 @@
       '@media (prefers-reduced-motion:no-preference){body{transition:margin-right .2s}}' +
       '.cmt-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:2px solid #0b0c0c;background:#ffc726;color:#0b0c0c}' +
       '.cmt-head h2{margin:0;font-size:18px;flex:1}.cmt-head button{background:none;border:0;color:#0b0c0c;font-size:20px;cursor:pointer;line-height:1}' +
-      '.cmt-sub{display:flex;align-items:center;gap:6px;padding:8px 16px;font-size:14px;color:#505a5f;border-bottom:1px solid #e0e4e9}' +
-      '.cmt-list{flex:1;overflow:auto;padding:8px 0}' +
+      '.cmt-sub{display:flex;align-items:center;gap:6px;padding:6px 16px;font-size:14px;color:#505a5f;border-bottom:1px solid #e0e4e9}.cmt-sub input[type=checkbox]{width:24px;height:24px;margin:0 4px 0 0;flex:none}.cmt-sub label{display:flex;align-items:center;min-height:24px}' +
+      '.cmt-list{flex:1;overflow:auto;padding:8px 0;margin:0;list-style:none}' +
       '.cmt-empty{padding:24px 16px;color:#505a5f;font-size:15px}' +
-      '.cmt-thread{padding:12px 16px;border-bottom:1px solid #e0e4e9;cursor:pointer}.cmt-thread[data-resolved] {opacity:.6}' +
+      '.cmt-thread{list-style:none;margin:0;padding:12px 16px;border-bottom:1px solid #e0e4e9;cursor:pointer}.cmt-thread[data-resolved] .cmt-body{color:#3b4347}.cmt-thread[data-resolved] .cmt-quote{text-decoration:line-through;text-decoration-thickness:1px}.cmt-state{display:inline-block;font-size:12px;font-weight:700;color:#0b0c0c;border:1px solid #0b0c0c;padding:0 6px;margin:0 0 6px}' +
       '.cmt-thread.cmt-active{background:#fffbea;box-shadow:inset 4px 0 0 #ffc726}' +
       '.cmt-quote{font-size:13px;color:#505a5f;border-left:3px solid #ffc726;padding-left:8px;margin-bottom:6px}' +
       '.cmt-lost{font-size:12px;color:#8a4b00;margin:-2px 0 6px}' +
       '.cmt-msg{margin:6px 0}.cmt-meta{font-size:12px;color:#505a5f}.cmt-body{font-size:15px;margin:2px 0;white-space:pre-wrap;word-wrap:break-word}' +
-      '.cmt-actions{display:flex;gap:10px;margin-top:6px}' +
-      '.cmt-actions button{background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline #ffc726 2px;text-underline-offset:3px}' +
-      '.cmt-reply{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmt-reply input{flex:1 1 100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;outline:0}.cmt-reply input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-reply input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-reply textarea{flex:1;min-width:0;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
+      '.cmt-actions{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px}' +
+      '.cmt-actions button{background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:700;cursor:pointer;padding:3px 2px;min-height:24px;text-decoration:underline #ffc726 2px;text-underline-offset:3px}' +
+      '.cmt-reply{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cmt-reply input{flex:1 1 100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;outline:0}.cmt-reply input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-reply textarea{flex:1;min-width:0;font:inherit;font-size:14px;border:0;background:#f3f2f1;padding:8px;resize:vertical;min-height:34px;outline:0}.cmt-reply textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}' +
       '.cmt-btn{background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer}.cmt-btn:hover{background:#ffd94d}' +
       '.cmt-selbtn{position:absolute;z-index:9002;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}' +
       '.cmt-composer{position:absolute;z-index:9003;background:#fff;border:2px solid #0b0c0c;box-shadow:0 4px 16px rgba(0,0,0,.2);padding:10px;width:280px}' +
-      '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;resize:vertical;min-height:72px;box-sizing:border-box;outline:0}.cmt-composer textarea:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;margin:0 0 10px;box-sizing:border-box;outline:0}.cmt-composer input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-composer .cmt-label{display:block;font-size:14px;font-weight:700;color:#0b0c0c;margin:0 0 6px}' +
+      '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;resize:vertical;min-height:72px;box-sizing:border-box;outline:0}.cmt-composer input{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;margin:0 0 10px;box-sizing:border-box;outline:0}.cmt-composer input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-composer .cmt-label{display:block;font-size:14px;font-weight:700;color:#0b0c0c;margin:0 0 6px}' +
       '.cmt-composer .cmt-row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}' +
+      '.cmt-pinghost{position:absolute;z-index:9002;width:28px;height:28px;margin:-14px 0 0 -14px;border:3px dashed #0b0c0c;background:rgba(255,199,38,.6);border-radius:50%;pointer-events:none}' +
+      '.cmt-error{font-size:13px;color:#8a1c14;margin:6px 0 0}.cmt-error .cmt-link{font-size:13px}.cmt-help{font-size:12px;color:#505a5f;margin:0 0 8px}.cmt-sub .cmt-selpanel{margin-left:auto;background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:700;cursor:pointer;text-decoration:underline #ffc726 2px;text-underline-offset:3px;min-height:24px;padding:2px 4px}' +
+      '@media (pointer:coarse){.cmt-help{display:none}}' +
       '.cmt-pin{position:absolute;z-index:9002;width:28px;height:28px;margin:-14px 0 0 -14px;padding:0;border-radius:50%;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;font:700 14px/1 "Figtree",arial,sans-serif;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.35)}' +
       '.cmt-pin:hover{background:#ffd94d}.cmt-pin:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}.cmt-pin[data-resolved]{background:#eef0f2}' +
       '.cmt-pin.cmt-flash{animation:cmtPin 1.2s ease}@keyframes cmtPin{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}' +
@@ -477,6 +586,7 @@
         '.cmt-head button{min-width:44px;min-height:44px}.cmt-head .cmt-close{width:44px;height:44px}.cmt-foot .cmt-footclose{min-height:44px}.cmt-foot{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}' +
         '.cmt-head .cmt-pinbtn{padding:0 12px;font-size:15px}' +
         '.cmt-sub{padding:0 8px 0 16px;font-size:16px;min-height:44px}' +
+        '.cmt-sub .cmt-selpanel{min-height:44px;min-width:44px;font-size:15px}' +
         '.cmt-sub input{width:22px;height:22px;margin:0 10px 0 0;flex:none}' +
         '.cmt-sub label{flex:1;display:flex;align-items:center;min-height:44px;cursor:pointer}' +
         '.cmt-list{overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 0 24px}' +
@@ -505,22 +615,37 @@
       '.cmt-compact .cmt-row{margin-top:8px;justify-content:space-between;align-items:center}' +
       '.cmt-compact .cmt-btns{display:flex;gap:6px;align-items:center}' +
       '.cmt-compact .cmt-who{font-size:14px;color:#505a5f}' +
+      '.cmt-composer .cmt-link,.cmt-compact .cmt-link{min-height:24px}.cmt-sheet .cmt-link{min-height:44px;min-width:44px}' +
       '.cmt-compact .cmt-link{background:none;border:0;color:#0b0c0c;font:inherit;font-weight:700;padding:0 0 0 4px;text-decoration:underline #ffc726 2px;text-underline-offset:3px;cursor:pointer}' +
       '.cmt-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
       // The words being commented on stay visible once the native selection clears.
       'mark.cmt-pending{font:inherit;color:#0b0c0c;background:#ffd94d;border-bottom:2px dashed #0b0c0c;padding:0 1px}' +
       '.cmt-composer.cmt-sheet .cmt-btn{padding:10px 18px;font-size:16px}.cmt-composer.cmt-sheet .cmt-cancel{padding:10px 12px;font-size:16px}' +
-      '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer}';
+      '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:700;cursor:pointer;min-height:24px}' +
+      // Reduced motion: no sliding or pulsing. The flash becomes a steady outline.
+      '@media (prefers-reduced-motion:reduce){.cmt-panel,.cmt-panel:not(.cmt-open){transition:none}body{transition:none !important}' +
+        'mark.cmt-hl.cmt-flash,.cmt-pin.cmt-flash{animation:none;outline:3px solid #0b0c0c;outline-offset:2px}}' +
+      // High contrast / forced colours: keep borders, and give marks a line that is not colour alone.
+      '@media (forced-colors:active){mark.cmt-hl,mark.cmt-pending{border-bottom:3px solid LinkText;forced-color-adjust:auto}' +
+        '.cmt-pin,.cmt-btn,.cmt-toggle,.cmt-selbtn,.cmt-selbar,.cmt-close,.cmt-pinbtn{border:2px solid ButtonText;forced-color-adjust:auto}' +
+        '.cmt-panel,.cmt-composer{border:2px solid CanvasText}}';
     document.head.appendChild(css);
 
     toggleBtn = el('button', 'cmt-toggle', 'Comments');
     toggleBtn.setAttribute('data-cmt', 'toggle');
-    toggleBtn.addEventListener('click', function () { panel.classList.contains('cmt-open') ? closePanel() : openPanel(); });
+    toggleBtn.setAttribute('aria-expanded', 'false'); toggleBtn.setAttribute('aria-controls', 'cmt-panel');
+    toggleBtn.addEventListener('click', function () { panel.classList.contains('cmt-open') ? closePanel() : openPanel({ focus: true }); });
     document.body.appendChild(toggleBtn);
 
-    panel = el('aside', 'cmt-panel'); panel.setAttribute('data-cmt', 'panel'); panel.setAttribute('aria-label', 'Comments');
+    announcer = el('div', 'cmt-live'); announcer.setAttribute('aria-live', 'polite'); announcer.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(announcer);
+
+    // An <aside> is a complementary landmark. On a phone the panel is a modal sheet (see openPanel).
+    panel = el('aside', 'cmt-panel'); panel.setAttribute('data-cmt', 'panel'); panel.id = 'cmt-panel';
+    panel.setAttribute('aria-labelledby', 'cmt-title'); panel.tabIndex = -1; panel.setAttribute('inert', '');
+    trapTab(panel, isCompact);
     var head = el('div', 'cmt-head');
-    var h2 = el('h2', '', 'Comments');
+    var h2 = el('h2', '', 'Comments'); h2.id = 'cmt-title';
     var close = el('button', 'cmt-close'); close.setAttribute('aria-label', 'Close comments'); close.title = 'Close';
     var svgNS = 'http://www.w3.org/2000/svg', icon = document.createElementNS(svgNS, 'svg');
     icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('width', '20'); icon.setAttribute('height', '20'); icon.setAttribute('aria-hidden', 'true'); icon.setAttribute('focusable', 'false');
@@ -538,12 +663,15 @@
     resolvedChk = el('input'); resolvedChk.type = 'checkbox'; resolvedChk.id = 'cmt-showres';
     resolvedChk.addEventListener('change', function () { showResolved = resolvedChk.checked; refresh(); });
     var lbl = el('label', '', 'Show resolved'); lbl.setAttribute('for', 'cmt-showres');
-    sub.appendChild(resolvedChk); sub.appendChild(lbl);
-    listEl = el('div', 'cmt-list');
+    var selPanel = el('button', 'cmt-selpanel', 'Comment on selection'); selPanel.type = 'button';
+    selPanel.addEventListener('click', function () { commentOnSelection(); });
+    sub.appendChild(resolvedChk); sub.appendChild(lbl); sub.appendChild(selPanel);
+    listEl = el('ul', 'cmt-list'); listEl.setAttribute('role', 'list'); listEl.setAttribute('aria-label', 'Comments on this page');
     var foot = el('div', 'cmt-foot');
     var closeBtn = el('button', 'cmt-btn cmt-footclose', 'Close');
     closeBtn.addEventListener('click', closePanel);
-    foot.appendChild(closeBtn);
+    var help = el('p', 'cmt-help', 'Keyboard: select text, then press Alt+Shift+C. Esc closes.');
+    foot.appendChild(help); foot.appendChild(closeBtn);
     panel.appendChild(head); panel.appendChild(sub); panel.appendChild(listEl); panel.appendChild(foot);
     // On a phone, the bottom Close button would sit above the keyboard while someone
     // types a reply and eat the space they need. Hide it until the field loses focus.
@@ -563,8 +691,8 @@
     }
     window.addEventListener('resize', fitPanel);
 
-    document.addEventListener('mouseup', function () { mouseIsDown = false; scheduleSelect(1); });
-    document.addEventListener('keyup', function () { scheduleSelect(1); });
+    document.addEventListener('mouseup', function () { mouseIsDown = false; keySelect = false; scheduleSelect(1); });
+    document.addEventListener('keyup', function (e) { if (e.shiftKey || /^(Arrow|Home$|End$|Page)/.test(e.key)) keySelect = true; scheduleSelect(1); });
     // A long-press on a phone fires neither of those, only selectionchange.
     // While a mouse button is held the selection is still being dragged, so wait.
     document.addEventListener('mousedown', function () { mouseIsDown = true; }, true);
@@ -586,14 +714,37 @@
     var a = document.activeElement;
     if (a && panel.contains(a) && a.scrollIntoView) { try { a.scrollIntoView({ block: 'nearest' }); } catch (e) { /* old browser */ } }
   }
-  function openPanel() {
+  // Desktop: a landmark beside the page; Tab can leave it. Phone: a modal sheet that
+  // keeps focus inside until it is closed.
+  var panelOpener = null, modalKeys = null;
+  function summary() {
+    var open = threads.filter(function (t) { return !t.resolved; }).length, n = threads.length;
+    if (!n) return 'No comments yet';
+    return n + (n === 1 ? ' comment, ' : ' comments, ') + open + ' unresolved';
+  }
+  function openPanel(opts) {
+    var was = panel.classList.contains('cmt-open');
+    if (!was) { var a = document.activeElement; panelOpener = (a && a !== document.body && !panel.contains(a)) ? a : null; }
     panel.classList.add('cmt-open');
+    panel.removeAttribute('inert');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+    if (isCompact()) { panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); }
+    else { panel.removeAttribute('role'); panel.removeAttribute('aria-modal'); }
     fitPanel();
     if (COMMENTS_CONFIG.dock) { document.documentElement.classList.add('cmt-docked'); remember('comments:open', '1'); }
+    if (!was) announce(summary());
+    if (!was && opts && opts.focus) focusEl(panel);
   }
-  function closePanel() {
+  function closePanel(noFocus) {
+    var hadFocus = document.activeElement && panel.contains(document.activeElement);
     panel.classList.remove('cmt-open');
-    if (document.activeElement && panel.contains(document.activeElement)) document.activeElement.blur();
+    panel.setAttribute('inert', '');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    if (hadFocus && !noFocus) {
+      var back = panelOpener && panelOpener.isConnected && panelOpener.getClientRects().length ? panelOpener : toggleBtn;
+      if (back.getClientRects().length) focusEl(back); else document.activeElement.blur();
+    } else if (hadFocus) document.activeElement.blur();
+    panelOpener = null;
     if (COMMENTS_CONFIG.dock) { document.documentElement.classList.remove('cmt-docked'); remember('comments:open', '0'); }
     emit('comments:close');
   }
@@ -602,30 +753,74 @@
     toggleBtn.textContent = 'Comments' + (n ? ' (' + n + ')' : '');
   }
 
+  function threadLabel(t) {
+    if (t.pin) return 'Pin ' + (t.pinNumber || '') + ' on ' + imageLabel(t.pin);
+    var q = String(t.quote || '').replace(/\s+/g, ' ').trim();
+    return '“' + (q.length > 50 ? q.slice(0, 50) + '…' : q) + '”';
+  }
   function renderPanel() {
     listEl.innerHTML = '';
     var visible = byPosition(threads.filter(function (t) { return showResolved || !t.resolved; }));
     if (!visible.length) {
-      listEl.appendChild(el('div', 'cmt-empty', (isTouch() ? 'No comments yet. Press and hold a word, drag to extend, then tap Comment.' : 'No comments yet. Select any text on the page to start one.') + (COMMENTS_CONFIG.pins ? ' You can also pin one to an image.' : '')));
+      listEl.appendChild(el('li', 'cmt-empty', (isTouch() ? 'No comments yet. Press and hold a word, drag to extend, then tap Comment.' : 'No comments yet. Select any text on the page to start one, then press Alt+Shift+C.') + (COMMENTS_CONFIG.pins ? ' You can also pin one to an image.' : '')));
       return;
     }
     visible.forEach(function (t) {
-      var box = el('div', 'cmt-thread'); box.dataset.thread = t.id; if (t.resolved) box.setAttribute('data-resolved', '1');
-      var q = t.pin
-        ? el('div', 'cmt-quote', 'Pin ' + (t.pinNumber || '') + ' on ' + imageLabel(t.pin))
-        : el('div', 'cmt-quote', '“' + t.quote + '”');
+      var box = el('li', 'cmt-thread'); box.dataset.thread = t.id; box.tabIndex = -1; if (t.resolved) box.setAttribute('data-resolved', '1');
+      var label = threadLabel(t), qid = 'cmt-q-' + t.id;
+      box.setAttribute('aria-labelledby', qid);
+      if (t.resolved) box.appendChild(el('span', 'cmt-state', 'Resolved'));
+      var q = el('div', 'cmt-quote', t.pin ? label : '“' + t.quote + '”'); q.id = qid;
       box.appendChild(q);
       if (!found[t.id]) box.appendChild(el('div', 'cmt-lost', t.pin ? 'This image is no longer on the page.' : 'This text has changed since the comment was left.'));
       box.appendChild(msg(t.author, t.text, t.createdAt));
       (t.replies || []).forEach(function (r) { box.appendChild(msg(r.author, r.text, r.createdAt)); });
       var actions = el('div', 'cmt-actions');
-      var reBtn = el('button', '', 'Reply'); reBtn.addEventListener('click', function (e) { e.stopPropagation(); showReply(box, t.id); });
-      var resBtn = el('button', '', t.resolved ? 'Reopen' : 'Resolve');
-      resBtn.addEventListener('click', function (e) { e.stopPropagation(); store.setResolved(t.id, !t.resolved).then(function () { emit('comments:resolved', { id: t.id, resolved: !t.resolved }); return refresh(); }); });
+      var reBtn = el('button', '', 'Reply'); reBtn.type = 'button'; reBtn.setAttribute('aria-label', 'Reply to the comment on ' + label);
+      reBtn.addEventListener('click', function (e) { e.stopPropagation(); showReply(box, t.id); });
+      var resBtn = el('button', '', t.resolved ? 'Reopen' : 'Resolve'); resBtn.type = 'button';
+      resBtn.setAttribute('aria-label', (t.resolved ? 'Reopen' : 'Resolve') + ' the comment on ' + label);
+      function toggleResolved() {
+        resBtn.disabled = true;
+        store.setResolved(t.id, !t.resolved).then(function () {
+          emit('comments:resolved', { id: t.id, resolved: !t.resolved });
+          return refresh().then(function () {
+            announce(t.resolved ? 'Thread reopened' : 'Thread resolved');
+            // The button that was used is gone after the redraw; keep focus in the list.
+            var again = listEl.querySelector('.cmt-thread[data-thread="' + cssId(t.id) + '"]');
+            if (again) focusEl(again); else focusEl(listEl.querySelector('.cmt-thread') || panel);
+          });
+        }, function () {
+          resBtn.disabled = false;
+          inlineError(box, 'Could not update the comment.', toggleResolved);
+        });
+      }
+      resBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleResolved(); });
+      if (found[t.id]) {
+        var goBtn = el('button', '', t.pin ? 'Go to pin' : 'Go to text'); goBtn.type = 'button';
+        goBtn.setAttribute('aria-label', (t.pin ? 'Go to the pin: ' : 'Go to the text: ') + label);
+        goBtn.addEventListener('click', function (e) { e.stopPropagation(); goTo(t.id); });
+        actions.appendChild(goBtn);
+      }
       actions.appendChild(reBtn); actions.appendChild(resBtn); box.appendChild(actions);
       box.addEventListener('click', function () { markActive(t.id); flash(t.id); });
       listEl.appendChild(box);
     });
+  }
+  // Scroll to a comment's words (or pin) and put keyboard focus there.
+  function goTo(id) {
+    if (isCompact() && panel.classList.contains('cmt-open')) closePanel(true);
+    var pe = document.querySelector('.cmt-pin[data-thread="' + cssId(id) + '"]');
+    var m = pe ? null : document.querySelector('mark.cmt-hl[data-threads~="' + cssId(id) + '"]');
+    var target = pe || m; if (!target) return;
+    target.scrollIntoView({ block: 'center', inline: 'center', behavior: scrollBehavior() });
+    if (m) {
+      m.setAttribute('tabindex', '-1');
+      m.addEventListener('blur', function off() { m.removeAttribute('tabindex'); m.removeEventListener('blur', off); });
+    }
+    focusEl(target);
+    target.classList.add('cmt-flash'); setTimeout(function () { target.classList.remove('cmt-flash'); }, 1200);
+    emit('comments:focus', { el: target });
   }
   function msg(author, text, ts) {
     var wrap = el('div', 'cmt-msg');
@@ -635,7 +830,7 @@
   }
   function showReply(box, id) {
     if (box.querySelector('.cmt-reply')) return;
-    var wrap = el('div', 'cmt-reply'); var ta = el('textarea'); var send = el('button', 'cmt-btn', 'Post'); ta.id = 'cmt-reply-' + id; ta.setAttribute('aria-label', 'Your reply');
+    var wrap = el('div', 'cmt-reply'); var ta = el('textarea'); var send = el('button', 'cmt-btn', 'Post'); send.type = 'button'; ta.id = 'cmt-reply-' + id; ta.setAttribute('aria-label', 'Your reply');
     ta.addEventListener('click', function (e) { e.stopPropagation(); });
     send.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -644,7 +839,21 @@
       if (!who) { nameIn.focus(); nameIn.classList.add('cmt-invalid'); return; }
       if (!v) { ta.focus(); return; }
       saveName(who);
-      store.reply(id, { id: uid(), author: who, text: v, createdAt: Date.now() }).then(function () { emit('comments:replied', { id: id }); return refresh(); });
+      function sendReply() {
+        send.disabled = true;
+        store.reply(id, { id: uid(), author: who, text: v, createdAt: Date.now() }).then(function () {
+          emit('comments:replied', { id: id });
+          return refresh().then(function () {
+            announce('Reply added');
+            var again = listEl.querySelector('.cmt-thread[data-thread="' + cssId(id) + '"]');
+            if (again) focusEl(again);
+          });
+        }, function () {
+          send.disabled = false;
+          inlineError(wrap, 'Could not post your reply.', sendReply);
+        });
+      }
+      sendReply();
     });
     // Anyone who has not given a name yet is asked for it first, above the reply.
     var nameIn = null;
@@ -680,14 +889,14 @@
   function flash(id) {
     var pe = document.querySelector('.cmt-pin[data-thread="' + cssId(id) + '"]');
     if (pe) {
-      pe.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+      pe.scrollIntoView({ block: 'center', inline: 'center', behavior: scrollBehavior() });
       pe.classList.add('cmt-flash'); setTimeout(function () { pe.classList.remove('cmt-flash'); }, 1200);
       emit('comments:focus', { el: pe });
       return;
     }
     var m = document.querySelector('mark.cmt-hl[data-threads~="' + cssId(id) + '"]');
     if (m) {
-      m.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+      m.scrollIntoView({ block: 'center', inline: 'center', behavior: scrollBehavior() });
       m.classList.add('cmt-flash'); setTimeout(function () { m.classList.remove('cmt-flash'); }, 1200);
       emit('comments:focus', { el: m });
     }
@@ -697,20 +906,44 @@
   var selTimer = null, barBusy = false, mouseIsDown = false;
   function isTouch() { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } }
   function scheduleSelect(delay) { clearTimeout(selTimer); selTimer = setTimeout(onSelect, delay); }
+  var lastInfo = null, keySelect = false;
+  // What is selected right now, as a comment would store it, or null.
+  function selectionInfo() {
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    var range = sel.getRangeAt(0);
+    if (!rootEl().contains(range.commonAncestorContainer)) return null;
+    if (range.startContainer.parentElement && range.startContainer.parentElement.closest(UI)) return null;
+    var quote = sel.toString().trim();
+    if (quote.length < 2) return null;
+    var rect = range.getBoundingClientRect();
+    return {
+      el: range.startContainer.parentElement, rect: rect,
+      saved: { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end'), range: range.cloneRange() }
+    };
+  }
+  // Keyboard and screen reader route: Alt+Shift+C, or the "Comment on selection"
+  // button in the panel. Focus may have moved since the text was selected, so the
+  // last selection is remembered for a couple of minutes.
+  function commentOnSelection() {
+    if (composer) return;
+    var info = selectionInfo();
+    if (!info && lastInfo && Date.now() - lastInfo.at < 120000) info = lastInfo.info;
+    if (!info) { announce('Select some text on the page first, then press Alt+Shift+C.'); return; }
+    removeSelBtn();
+    openComposer(info.saved, info.rect);
+  }
   function onSelect() {
     if (barBusy) return;   // someone is pressing the Comment bar; the tap can clear the selection first on iOS
     if (composer) return;  // a comment is being written; leave it alone
     removeSelBtn();
-    var sel = window.getSelection();
-    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
-    var range = sel.getRangeAt(0);
-    if (!rootEl().contains(range.commonAncestorContainer)) return;
-    if (range.startContainer.parentElement && range.startContainer.parentElement.closest(UI)) return;
-    var quote = sel.toString().trim();
-    if (quote.length < 2) return;
-    emit('comments:select', { el: range.startContainer.parentElement });
-    var rect = range.getBoundingClientRect();
-    var saved = { quote: quote, prefix: ctx(range, -32, 'start'), suffix: ctx(range, 32, 'end'), range: range.cloneRange() };
+    var info = selectionInfo();
+    if (!info) return;
+    lastInfo = { info: info, at: Date.now() };
+    emit('comments:select', { el: info.el });
+    var rect = info.rect, saved = info.saved;
+    if (keySelect && !isTouch()) announce('Text selected. Press Alt+Shift+C to comment on it.');
+    keySelect = false;
     var touch = isTouch();
     selBtn = el('button', touch ? 'cmt-selbar' : 'cmt-selbtn', touch ? 'Comment on selection' : 'Comment');
     if (!touch) {
@@ -809,6 +1042,30 @@
       try { r.surroundContents(m); } catch (e) { /* crosses a boundary; skip this piece */ }
     });
   }
+  var composerOpener = null;
+  // Cancel or Escape: give focus back to where it came from.
+  function cancelComposer() {
+    var back = composerOpener;
+    removeComposer();
+    if (back && back.isConnected && back.getClientRects().length) focusEl(back);
+  }
+  // Post a new thread; on failure keep the box open, say so, and offer a retry.
+  function postThread(thread, btn, host) {
+    btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+    store.create(thread).then(function (created) {
+      emit('comments:created', { thread: created || thread });
+      removeComposer(); window.getSelection().removeAllRanges();
+      return refresh().then(function () {
+        openPanel();
+        var id = created && created.id;
+        if (id) { var box = markActive(id); if (box) { focusEl(box); box.scrollIntoView({ block: 'nearest' }); } }
+        announce('Comment added');
+      });
+    }, function () {
+      btn.disabled = false; btn.removeAttribute('aria-busy');
+      inlineError(host, 'Could not post your comment.', function () { postThread(thread, btn, host); });
+    });
+  }
   function removeComposer() {
     clearPending();
     if (composer) { composer.remove(); composer = null; }
@@ -835,7 +1092,7 @@
     var s1 = el('div', 'cmt-step');
     var top = el('div', 'cmt-top');
     var q1 = el('label', '', "What's your name?"); q1.setAttribute('for', 'cmt-name');
-    var cancel1 = el('button', 'cmt-link', 'Cancel'); cancel1.type = 'button'; cancel1.addEventListener('click', removeComposer);
+    var cancel1 = el('button', 'cmt-link', 'Cancel'); cancel1.type = 'button'; cancel1.addEventListener('click', cancelComposer);
     top.appendChild(q1); top.appendChild(cancel1);
     var line = el('div', 'cmt-nameline');
     var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name'; nameIn.enterKeyHint = 'next';
@@ -856,7 +1113,7 @@
     var change = el('button', 'cmt-link', 'Change'); change.type = 'button';
     whoEl.appendChild(document.createTextNode('as ')); whoEl.appendChild(whoName); whoEl.appendChild(change);
     var btns = el('div', 'cmt-btns');
-    var cancel2 = el('button', 'cmt-cancel', 'Cancel'); cancel2.type = 'button'; cancel2.addEventListener('click', removeComposer);
+    var cancel2 = el('button', 'cmt-cancel', 'Cancel'); cancel2.type = 'button'; cancel2.addEventListener('click', cancelComposer);
     var post = el('button', 'cmt-btn', 'Comment'); post.type = 'button';
     btns.appendChild(cancel2); btns.appendChild(post);
     row.appendChild(whoEl); row.appendChild(btns);
@@ -914,14 +1171,9 @@
         prefix: saved.prefix, suffix: saved.suffix, pin: saved.pin || undefined, author: who,
         text: v, createdAt: Date.now(), resolved: false, replies: []
       };
-      store.create(thread).then(function (created) {
-        emit('comments:created', { thread: created || thread });
-        removeComposer(); window.getSelection().removeAllRanges();
-        return refresh().then(function () { openPanel(); if (created && created.id) markActive(created.id); });
-      });
+      postThread(thread, post, composer);
     });
-    sheetKeys = function (e) { if (e.key === 'Escape' && composer === sheet) removeComposer(); };
-    document.addEventListener('keydown', sheetKeys);
+    trapTab(sheet);
 
     composer.appendChild(live); composer.appendChild(s1); composer.appendChild(s2);
     document.body.appendChild(composer);
@@ -933,9 +1185,11 @@
   }
 
   function openComposer(saved, rect) {
+    var from = document.activeElement;
+    composerOpener = (from && from !== document.body && !(from.closest && from.closest('[data-cmt="ui"].cmt-selbtn, .cmt-selbtn, .cmt-selbar'))) ? from : null;
     removeSelBtn(); removeComposer();
     if (isTouch()) { openSheet(saved); return; }
-    composer = el('div', 'cmt-composer');
+    composer = el('div', 'cmt-composer'); composer.setAttribute('role', 'dialog'); composer.setAttribute('aria-label', 'Add a comment'); trapTab(composer);
     composer.style.top = (window.scrollY + rect.bottom + 6) + 'px';
     composer.style.left = (window.scrollX + Math.min(rect.left, document.documentElement.clientWidth - 300)) + 'px';
     var nameIn = el('input'); nameIn.type = 'text'; nameIn.id = 'cmt-name'; nameIn.maxLength = 80; nameIn.autocomplete = 'name';
@@ -944,7 +1198,7 @@
     var ta = el('textarea'); ta.id = 'cmt-new';
     var lab = el('label', 'cmt-label', 'Your comment'); lab.setAttribute('for', 'cmt-new');
     var row = el('div', 'cmt-row');
-    var cancel = el('button', 'cmt-cancel', 'Cancel'); cancel.addEventListener('click', removeComposer);
+    var cancel = el('button', 'cmt-cancel', 'Cancel'); cancel.type = 'button'; cancel.addEventListener('click', cancelComposer);
     var post = el('button', 'cmt-btn', 'Comment');
     post.addEventListener('click', function () {
       var v = ta.value.trim();
@@ -957,11 +1211,7 @@
         prefix: saved.prefix, suffix: saved.suffix, pin: saved.pin || undefined, author: who,
         text: v, createdAt: Date.now(), resolved: false, replies: []
       };
-      store.create(thread).then(function (created) {
-        emit('comments:created', { thread: created || thread });
-        removeComposer(); window.getSelection().removeAllRanges();
-        return refresh().then(function () { openPanel(); if (created && created.id) markActive(created.id); });
-      });
+      postThread(thread, post, composer);
     });
     row.appendChild(cancel); row.appendChild(post);
     composer.appendChild(nameLab); composer.appendChild(nameIn); composer.appendChild(lab); composer.appendChild(ta); composer.appendChild(row);

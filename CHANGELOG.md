@@ -2,6 +2,25 @@
 
 All notable changes to Notis. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - unreleased
+
+An accessibility pass. Because the widget's source changed, this is a new version: 0.2.0 is archived and doesn't change.
+
+### Added
+- **Keyboard route to commenting:** select text with Shift + arrow keys and press Alt+Shift+C, or use **Comment on selection** in the panel. Screen readers are told the shortcut when text is selected. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
+- **Keyboard pinning:** in pin mode images become focusable, arrow keys move the pin and Enter drops it. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
+- **Go to text / Go to pin** in each comment moves focus to the highlight or pin. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
+- A live region announces added comments and replies, resolve and reopen, the counts when the panel opens, and errors. A failed post, reply, resolve or load now shows a message with a Retry button instead of failing silently. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
+- A resolved comment is labelled "Resolved" in words. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
+- `scripts/check-a11y.mjs`, a browser check for keyboard use, announcements, contrast, target size, reduced motion, forced colours and zoom. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
+
+### Changed
+- Escape closes the innermost thing first (reply box or comment box, then pin mode, then the panel), and focus returns to where it was. The comment box and the phone sheet keep Tab inside them while open.
+- The panel is a labelled region, and a modal dialog on phones with focus kept inside. The closed panel is hidden from Tab and screen readers, and the Comments button reports `aria-expanded`.
+- Comments are a list, each named by its words, and Reply, Resolve and Go to buttons say which comment they act on.
+- Highlights use a darker underline so they stand out from the page (3:1), focus rings are a solid ink ring on every control, and controls are at least 24 px (44 px on touch). Resolved comments no longer fade to a low contrast.
+- With `prefers-reduced-motion` the panel doesn't slide and the flash is a steady outline. In forced-colours mode highlights, pins and buttons keep a border.
+
 ## [0.2.0] - 2026-10-11
 
 ### Added
@@ -39,5 +58,6 @@ First version in its own repository, taken from the copies in use on several sit
 ### Changed
 - Removed project-specific names: neutral event, class and storage-key prefixes (`comments:*`, `cmt-*`), and the licence holder is Gavin Wye. ([#9](https://github.com/gavinwye/notis.gavinwye.com/pull/9))
 
+[0.3.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/gavinwye/notis.gavinwye.com/releases/tag/v0.1.0
