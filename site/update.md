@@ -78,7 +78,7 @@ Use the versioned addresses from `version.json`. They never change, so the same 
 ```bash
 curl -fsSL https://notis.gavinwye.com/v<version>/comments.js -o <path to the existing widget>
 curl -fsSL https://notis.gavinwye.com/v<version>/comments.js.sri
-# the second command's output should equal:
+# the second command's output is "sha384-" followed by the same text as:
 openssl dgst -sha384 -binary <path to the existing widget> | openssl base64 -A
 ```
 

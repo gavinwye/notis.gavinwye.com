@@ -33,7 +33,7 @@ A released version is immutable. Its files live at `https://notis.gavinwye.com/v
    ```
 
    `prepack` builds `dist/` first. Check `npm pack --dry-run` lists `dist/comments.js`, `dist/server/*.mjs` and `server/*.mjs`.
-9. **Check it.** Open `https://notis.gavinwye.com/v<version>/comments.js` and confirm the response header `cache-control: public, max-age=31536000, immutable`, and that `version.json` shows the new version.
+9. **Check it.** Open `https://notis.gavinwye.com/v<version>/comments.js` and confirm the response header `cache-control: public, max-age=31536000, immutable`, and that `version.json` shows the new version. Also confirm the script is served with `access-control-allow-origin: *` (`curl -sI https://notis.gavinwye.com/v<version>/comments.js | grep -i access-control`). Without it the documented hosted tag (`integrity` plus `crossorigin="anonymous"`) is blocked by the browser on every other site, and the widget never loads.
 
 ## If a released version has a bug
 

@@ -74,7 +74,7 @@ The file runs from your own server: visitors never contact notis.gavinwye.com, a
 
 ```bash
 curl -fsSL https://notis.gavinwye.com/v0.3.1/comments.js -o public/comments.js
-curl -fsSL https://notis.gavinwye.com/v0.3.1/comments.js.sri       # should equal:
+curl -fsSL https://notis.gavinwye.com/v0.3.1/comments.js.sri       # "sha384-" followed by the same text as:
 openssl dgst -sha384 -binary public/comments.js | openssl base64 -A
 ```
 
