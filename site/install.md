@@ -187,4 +187,4 @@ curl -s "<site>/api/comments?page=<pageId>"
 
 Each thread has `quote` (the words), `text` (the note), `resolved`, and `replies`. A pinned thread has `pin` instead of a quote. To mark one done, `PATCH /api/comments/<id>` with `{"resolved": true}`.
 
-Deleting needs the admin token. When you script it, quote the id and check that it isn't empty before you call it (`[ -n "$ID" ] && curl -X DELETE ...`). A delete with a missing id must never be sent.
+Deleting needs the admin token. An empty id is refused with `400` and removes nothing (only `DELETE /api/comments`, with no trailing slash, clears every note), but when you script it, still quote the id (`"$ID"`) so a mistake shows up as an error.
