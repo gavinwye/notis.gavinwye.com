@@ -4,6 +4,8 @@
 
 - [Add Notis to a site (instructions for an agent)](https://notis.gavinwye.com/install.md)
 - [README and API](https://github.com/gavinwye/notis.gavinwye.com#readme)
+- [Update Notis in a site (instructions for an agent)](https://notis.gavinwye.com/update.md)
+- [The latest version, its address and hash](https://notis.gavinwye.com/version.json)
 - [The script](https://notis.gavinwye.com/comments.js)
 - Server files, one per host: [Netlify](https://notis.gavinwye.com/server/netlify.mjs), [Cloudflare Workers](https://notis.gavinwye.com/server/cloudflare.mjs), [Node](https://notis.gavinwye.com/server/node.mjs)
 - [Report a bug](https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml)

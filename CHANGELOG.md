@@ -4,6 +4,8 @@ All notable changes to Notis. The format follows [Keep a Changelog](https://keep
 
 ## [0.3.1] - 2026-10-11
 
+**Widget: no** (only its version number changes). **Server: yes** (on every host; security fixes, so don't skip it).
+
 Server fixes. The widget is unchanged apart from its version number. Because the server files are part of a release, this is a new version: 0.3.0 is archived and doesn't change.
 
 ### Security
@@ -21,6 +23,8 @@ Server fixes. The widget is unchanged apart from its version number. Because the
 - The installation snippets now read one page (`?page=`) instead of the whole list. ([#72](https://github.com/gavinwye/notis.gavinwye.com/pull/72))
 
 ## [0.3.0] - 2026-10-11
+
+**Widget: yes. Server: no** (the server files are identical to 0.2.0).
 
 An accessibility pass, notes wording and Barlow type. Because the widget's source changed, this is a new version: 0.2.0 is archived and doesn't change.
 
@@ -45,6 +49,8 @@ An accessibility pass, notes wording and Barlow type. Because the widget's sourc
 - With `prefers-reduced-motion` the panel doesn't slide and the flash is a steady outline. In forced-colours mode highlights, pins and buttons keep a border.
 
 ## [0.2.0] - 2026-10-11
+
+**Widget: yes. Server: yes** (the single-file servers for Netlify, Cloudflare and Node are new in this version, and notes are stored one per record).
 
 ### Added
 - Phones and tablets: selecting text with a long-press now works. A "Comment on selection" bar sits at the bottom of the screen, and the comment box is a compact two-step sheet (name, then comment) that keeps your selected words highlighted above the keyboard. ([#47](https://github.com/gavinwye/notis.gavinwye.com/pull/47))

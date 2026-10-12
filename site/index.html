@@ -79,6 +79,12 @@
   code { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.9em; }
   p code, li code { background:var(--tint); border:1px solid var(--line); padding:1px 6px; }
   h3 { font-size:22px; font-weight:600; line-height:1.25; margin:28px 0 8px; }
+  pre.prompt { white-space:pre-wrap; overflow-wrap:anywhere; }
+  details { border:1px solid var(--line); background:var(--tint); padding:12px 16px; margin:0 0 20px; }
+  details[open] { padding-bottom:4px; }
+  summary { cursor:pointer; font-weight:600; }
+  summary:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  details pre { margin-top:12px; }
   .copy { font:inherit; font-size:17px; font-weight:600; background:var(--markline); color:#0b0c0c; border:2px solid #0b0c0c; padding:8px 14px; cursor:pointer; }
   .copy:hover { background:#ffd94d; }
   .copy:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
@@ -164,17 +170,29 @@
 
   <section id="add-it-to-a-page">
     <h2>Add it to a page</h2>
-    <p>One line before <code>&lt;/body&gt;</code>:</p>
-    <pre><code>&lt;script src="https://notis.gavinwye.com/v0.3.0/comments.js"
-  integrity="sha384-zBFcKQGAPWicStoMgHXnnyyqshoLQQG6d6go9c5XQ1c9/rsXEowFE0twoWjJStln"
-  crossorigin="anonymous" defer&gt;&lt;/script&gt;</code></pre>
-    <p>Notes are stored by a small serverless function in the same repo. Deploy it to Netlify, set an admin token, and you're done. There's no database and nothing to build.</p>
+    <p>Copy one file into your site, then add one line before <code>&lt;/body&gt;</code>. The file runs from your own server, so your visitors never contact this site.</p>
+    <pre><code>&lt;script src="/comments.js" defer&gt;&lt;/script&gt;</code></pre>
+    <p>The file is <code>https://notis.gavinwye.com/v<span class="js-version">&lt;version&gt;</span>/comments.js</code>. <a href="/version.json">The current version and its checksum are in <code>version.json</code></a>. A versioned address never changes, so a copy you check against that checksum is exactly what was released.</p>
+    <p>Notes are stored by a small server function on your own host: Netlify, Cloudflare Workers or Node. Set an admin token, and you're done. There's no database and nothing to build.</p>
     <p><a href="https://github.com/gavinwye/notis.gavinwye.com#readme">Setup, options and the API are in the README.</a></p>
+    <details>
+      <summary>Just trying it? Load it from this site instead</summary>
+      <p>This works anywhere you can add a tag, but every visitor's browser then fetches the file from notis.gavinwye.com, so your page depends on this site being up and this site sees each visit. I wouldn't use it in production.</p>
+      <pre><code>&lt;script src="https://notis.gavinwye.com/v<span class="js-version">&lt;version&gt;</span>/comments.js"
+  integrity="sha384-<span class="js-hash">&lt;hash from version.json&gt;</span>"
+  crossorigin="anonymous" defer&gt;&lt;/script&gt;</code></pre>
+    </details>
     <h3>Or ask an agent to do it</h3>
     <p>Paste this into Claude Code, Codex, Cursor or any coding agent that's working in your site's folder:</p>
     <pre class="prompt"><code id="agent-prompt">Add Notis to this site. Follow the instructions at https://notis.gavinwye.com/install.md</code></pre>
     <p><button type="button" id="copy-prompt" class="copy">Copy the prompt</button> <span id="copy-note" class="small" role="status"></span></p>
     <p class="small">The agent reads <a href="/install.md">install.md</a>, asks you where it should run, adds the script, and checks it works. It asks before it sets up shared storage.</p>
+    <h3>Keep it up to date</h3>
+    <p>Because the file lives on your own server, it only changes when you change it. Nothing about your site moves without you, and you choose when to update. When a new version comes out, replace the widget file and the server file together: a server update can be a security fix.</p>
+    <p>The quick way is the same one-line habit:</p>
+    <pre class="prompt"><code id="agent-update-prompt">Update Notis in this site. Follow the instructions at https://notis.gavinwye.com/update.md</code></pre>
+    <p><button type="button" id="copy-update-prompt" class="copy">Copy the prompt</button> <span id="copy-update-note" class="small" role="status"></span></p>
+    <p class="small">The agent compares your copy with the latest version, reads the changelog for what changed, replaces the files, keeps your settings, and checks your notes are still there. See <a href="/update.md">update.md</a>. To check by hand, type <code>NotisVersion</code> in the browser console and compare it with <a href="/version.json">version.json</a>, or watch the <a href="https://github.com/gavinwye/notis.gavinwye.com/releases">GitHub releases</a>.</p>
   </section>
 
   <section id="what-you-get">
@@ -205,6 +223,8 @@
   // The footer shows the version that was built: /version.json is written by the build.
   fetch("/version.json").then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
     if (v && v.version) document.getElementById("site-version").textContent = v.version;
+    if (v && v.version) document.querySelectorAll(".js-version").forEach(function (e) { e.textContent = v.version; });
+    if (v && v.integrity) document.querySelectorAll(".js-hash").forEach(function (e) { e.textContent = String(v.integrity).replace(/^sha384-/, ""); });
   }).catch(function () { /* keep the fallback text */ });
 </script>
 <script>
@@ -226,13 +246,17 @@
   })();
 </script>
 <script>
-  document.getElementById("copy-prompt").addEventListener("click", function () {
-    var text = document.getElementById("agent-prompt").textContent, note = document.getElementById("copy-note");
-    function done(msg) { note.textContent = msg; setTimeout(function () { note.textContent = ""; }, 2500); }
-    if (window.umami && window.umami.track) window.umami.track("copy-agent-prompt");
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done("Copied."); }, function () { done("Select the text and copy it."); });
-    else done("Select the text and copy it.");
-  });
+  function wireCopy(buttonId, promptId, noteId, eventName) {
+    document.getElementById(buttonId).addEventListener("click", function () {
+      var text = document.getElementById(promptId).textContent, note = document.getElementById(noteId);
+      function done(msg) { note.textContent = msg; setTimeout(function () { note.textContent = ""; }, 2500); }
+      if (window.umami && window.umami.track) window.umami.track(eventName);
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done("Copied."); }, function () { done("Select the text and copy it."); });
+      else done("Select the text and copy it.");
+    });
+  }
+  wireCopy("copy-prompt", "agent-prompt", "copy-note", "copy-agent-prompt");
+  wireCopy("copy-update-prompt", "agent-update-prompt", "copy-update-note", "copy-update-prompt");
 </script>
 <!-- Page views and one event, on the site's own Umami (umami.gvn.sh). Only counts on notis.gavinwye.com, not on previews or localhost. The widget itself sends nothing. -->
 <script defer src="https://umami.gvn.sh/script.js" data-website-id="01b4bb86-648b-43e5-83bb-a845fabd0bd2" data-domains="notis.gavinwye.com" data-do-not-track="true"></script>
