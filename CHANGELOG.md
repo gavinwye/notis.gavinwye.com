@@ -2,6 +2,15 @@
 
 All notable changes to Notis. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-10-12
+
+**Widget: no** (only its version number changes). **Server: yes** (on every host; it removes a way to lose every note by mistake, so don't skip it).
+
+A one-line server fix. The widget is unchanged apart from its version number. Because the server files are part of a release, this is a new version: 0.3.1 is archived and doesn't change.
+
+### Fixed
+- **An empty id on DELETE no longer clears every note.** `DELETE /api/comments/` (a trailing slash with nothing after it, or an empty segment such as `/api/comments//`, which is what a script sends when its `$ID` is unset) used to be treated as "clear everything" when the admin token was valid. It is now refused with `400` ("a note id is required; to clear all notes use DELETE /api/comments") and nothing is touched. `DELETE /api/comments` with no trailing slash is still the only form that clears everything, and `DELETE /api/comments/<id>` still removes one note (one trailing slash after an id is accepted). ([#79](https://github.com/gavinwye/notis.gavinwye.com/issues/79))
+
 ## [0.3.1] - 2026-10-11
 
 **Widget: no** (only its version number changes). **Server: yes** (on every host; security fixes, so don't skip it).
@@ -87,6 +96,7 @@ First version in its own repository, taken from the copies in use on several sit
 ### Changed
 - Removed project-specific names: neutral event, class and storage-key prefixes (`comments:*`, `cmt-*`), and the licence holder is Gavin Wye. ([#9](https://github.com/gavinwye/notis.gavinwye.com/pull/9))
 
+[0.3.2]: https://github.com/gavinwye/notis.gavinwye.com/releases/tag/v0.3.2
 [0.3.1]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.1.0...v0.2.0

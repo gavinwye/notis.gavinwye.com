@@ -102,6 +102,36 @@ test("clear removes everything", async () => {
   assert.equal((await call(h, "GET", "/api/comments", undefined, { authorization: "Bearer tok" })).json.length, 0);
 });
 
+test("delete: an empty id is refused and nothing is removed (issue #79)", async () => {
+  const h = make();
+  const a = (await call(h, "POST", "/api/comments", { pageId: "/a", text: "one" })).json;
+  const b = (await call(h, "POST", "/api/comments", { pageId: "/a", text: "two" })).json;
+  const auth = { authorization: "Bearer tok" };
+  for (const path of ["/api/comments/", "/api/comments//", "/api/comments///"]) {
+    const r = await call(h, "DELETE", path, undefined, auth);
+    assert.equal(r.status, 400, path);
+    assert.match(r.json.error, /note id is required/);
+  }
+  assert.equal((await call(h, "GET", "/api/comments?page=/a")).json.length, 2, "both notes still there");
+  // without the token it is a plain 403 either way
+  assert.equal((await call(h, "DELETE", "/api/comments/")).status, 403);
+  assert.equal((await call(h, "DELETE", "/api/comments")).status, 403);
+  // a real id deletes exactly one, with or without one trailing slash
+  assert.equal((await call(h, "DELETE", `/api/comments/${a.id}/`, undefined, auth)).json.removed, 1);
+  assert.equal((await call(h, "DELETE", `/api/comments/${b.id}`, undefined, auth)).json.removed, 1);
+  // the bare base path is the only form that clears everything
+  await call(h, "POST", "/api/comments", { pageId: "/a", text: "three" });
+  const cleared = await call(h, "DELETE", "/api/comments", undefined, auth);
+  assert.equal(cleared.json.cleared, true);
+  assert.equal((await call(h, "GET", "/api/comments?page=/a")).json.length, 0);
+});
+
+test("a trailing slash on GET still lists the page", async () => {
+  const h = make();
+  await call(h, "POST", "/api/comments", { pageId: "/a", text: "one" });
+  assert.equal((await call(h, "GET", "/api/comments/?page=/a")).json.length, 1);
+});
+
 test("CORS: OPTIONS is a null-body 204, and a foreign origin is refused", async () => {
   const h = make({ allowedOrigins: ["https://site.example"] });
   assert.equal((await call(h, "OPTIONS", "/api/comments", undefined, { origin: "https://site.example" })).status, 204);

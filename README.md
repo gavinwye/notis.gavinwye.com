@@ -240,7 +240,7 @@ Open an issue on GitHub: [report a bug](https://github.com/gavinwye/notis.gavinw
 | `POST /api/comments/:id/replies` | `{ author, text }` | the new reply |
 | `PATCH /api/comments/:id` | `{ resolved }` | the updated thread |
 | `DELETE /api/comments/:id` | | removes one thread (admin token) |
-| `DELETE /api/comments` | | removes everything (admin token) |
+| `DELETE /api/comments` | | removes everything (admin token). Only this exact path, with no trailing slash, clears all notes: `DELETE /api/comments/` or an empty id is refused with `400` |
 
 A pin is `{ src, alt, i, x, y }`: the image's `src`, its `alt` text, its position among the page's images, and the point as fractions (0 to 1) of the image's width and height. A pinned thread has an empty `quote`.
 

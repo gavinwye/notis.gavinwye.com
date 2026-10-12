@@ -206,8 +206,16 @@ export function createHandler({ storage, config = {} }) {
       // ---- DELETE (moderation) ----
       if (req.method === "DELETE") {
         if (!isAdmin(req)) return json({ error: "forbidden" }, 403);
-        if (seg.length === 0) { await storage.clear(); return json({ ok: true, cleared: true }); }
-        if (seg.length === 1) return json({ ok: true, removed: (await storage.remove(seg[0])) ? 1 : 0 });
+        // Only the bare base path clears everything. A trailing slash or an empty
+        // segment (what a script sends when its $ID is unset) is refused, so a
+        // mistake can't wipe the store.
+        const rest = url.pathname.slice(basePath.length);
+        if (rest === "") { await storage.clear(); return json({ ok: true, cleared: true }); }
+        const one = rest.endsWith("/") ? rest.slice(0, -1) : rest; // one trailing slash after an id is harmless
+        if (seg.length !== 1 || !/^\/[^/]+$/.test(one) || one.slice(1).trim() === "") {
+          return json({ error: "a note id is required; to clear all notes use DELETE " + basePath }, 400);
+        }
+        return json({ ok: true, removed: (await storage.remove(seg[0])) ? 1 : 0 });
       }
 
       return json({ error: "unsupported", method: req.method }, 400);
