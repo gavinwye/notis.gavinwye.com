@@ -328,7 +328,6 @@ releases/                     archived releases, republished unchanged (see RELE
 CHANGELOG.md, RELEASING.md    what changed, and how to release
 test/                         `npm test`
 site/                         the website (notis.gavinwye.com)
-docs/PLAN.md                  how we're publishing it
 ```
 
 ## Licence

@@ -13,3 +13,6 @@ site/v[0-9]*/
 site/version.json
 site/.stage-*
 .claude/worktrees/
+
+# Private planning notes (kept locally, not published)
+docs/PLAN.md
