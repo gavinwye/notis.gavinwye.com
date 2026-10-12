@@ -15,32 +15,36 @@ If the site has a preview or staging build, wire it there. If there's only produ
 
 ## 2. Get the script
 
-Find the current version and its hash at https://notis.gavinwye.com/version.json:
+Read the current version and its hash from https://notis.gavinwye.com/version.json. Use the values it returns, not the ones in this example:
 
 ```json
-{ "version": "0.3.0",
-  "script": "https://notis.gavinwye.com/v0.3.0/comments.js",
-  "integrity": "sha384-zBFcKQGAPWicStoMgHXnnyyqshoLQQG6d6go9c5XQ1c9/rsXEowFE0twoWjJStln",
-  "snippet": "https://notis.gavinwye.com/v0.3.0/snippet.html" }
+{ "version": "0.3.1",
+  "script": "https://notis.gavinwye.com/v0.3.1/comments.js",
+  "integrity": "sha384-O1JkOvtU6pF5DrL2wz0QKOsFJ2PznDX1e9ltLKMkvpAU6K23JvK/OtFatbqlw7DA",
+  "snippet": "https://notis.gavinwye.com/v0.3.1/snippet.html" }
 ```
 
 Everything under `/v<version>/` is immutable: the same address always returns the same bytes. The unversioned `/comments.js` changes when a new version is released, so don't point a site at it.
 
-**If the site has a folder for static files (`public/`, `static/`, the site root), save a copy there**, so it's served at `/comments.js`. Use the versioned file and check it against the hash:
+### Default: a copy on the user's own site
+
+Save the file into the site's folder for static files (`public/`, `static/`, the site root), so it's served at `/comments.js` from the user's own server. Visitors then never contact the Notis site, and the user decides when to update. Use the versioned file and check it against the hash:
 
 ```bash
-curl -fsSL https://notis.gavinwye.com/v0.3.0/comments.js -o <static dir>/comments.js
-curl -fsSL https://notis.gavinwye.com/v0.3.0/comments.js.sri
+curl -fsSL https://notis.gavinwye.com/v<version>/comments.js -o <static dir>/comments.js
+curl -fsSL https://notis.gavinwye.com/v<version>/comments.js.sri
 # the second command's output should equal:
 openssl dgst -sha384 -binary <static dir>/comments.js | openssl base64 -A
 ```
 
-Commit the file, and say in your report which version you saved.
+If the two don't match, stop and say so. Commit the file, and say in your report which version you saved.
 
-**If you're adding the script from the web instead** (a page you can edit but that has no static folder, a CMS, a hosted page builder), use the versioned URL with its integrity hash. Take the tag from `snippet`, never the unversioned URL:
+### Second choice: load it from the Notis site
+
+Only for a quick try, or where there is no static folder (a CMS, a hosted page builder). **Not recommended for production:** every visitor's browser then fetches the file from notis.gavinwye.com, so the site depends on it being up and the Notis site sees each visitor's request. Use the versioned address with its integrity hash, taken from `snippet`, never the unversioned one:
 
 ```html
-<script src="https://notis.gavinwye.com/v0.3.0/comments.js" integrity="sha384-zBFcKQGAPWicStoMgHXnnyyqshoLQQG6d6go9c5XQ1c9/rsXEowFE0twoWjJStln" crossorigin="anonymous" defer></script>
+<script src="https://notis.gavinwye.com/v<version>/comments.js" integrity="sha384-<hash from version.json>" crossorigin="anonymous" defer></script>
 ```
 
 With this form, that tag is the script tag, so skip the `<script src="/comments.js">` line in step 3. Everything else is the same.
@@ -70,9 +74,9 @@ Work out the host from the repo (a `netlify.toml`, a `wrangler.toml`, a Dockerfi
 | Option | Use when | File to download |
 |---|---|---|
 | **Browser only** | A quick demo. Comments aren't shared. | none. Add `<script>window.COMMENTS_CONFIG = { apiBase: null };</script>` before the script tag |
-| **Netlify** | The site is on Netlify. | `https://notis.gavinwye.com/server/netlify.mjs` |
-| **Cloudflare Workers** | The site is on Cloudflare. | `https://notis.gavinwye.com/server/cloudflare.mjs` |
-| **Node** | A server, a VPS, Docker, Fly, Railway. | `https://notis.gavinwye.com/server/node.mjs` |
+| **Netlify** | The site is on Netlify. | `servers.netlify` from version.json |
+| **Cloudflare Workers** | The site is on Cloudflare. | `servers.cloudflare` from version.json |
+| **Node** | A server, a VPS, Docker, Fly, Railway. | `servers.node` from version.json |
 | **Something else** | Vercel, static hosting, and so on | Run the Node file somewhere, and set `apiBase` to its address. Tell the user it needs a small always-on server. |
 
 ## 5. Set up the server
@@ -83,14 +87,14 @@ Ask the user first. This adds a function or a service and a secret.
 
 ```bash
 mkdir -p netlify/functions
-curl -fsSL https://notis.gavinwye.com/server/netlify.mjs -o netlify/functions/comments.mjs
+curl -fsSL https://notis.gavinwye.com/v<version>/server/netlify.mjs -o netlify/functions/comments.mjs
 npm install @netlify/blobs
 ```
 
 **Cloudflare Workers**
 
 ```bash
-curl -fsSL https://notis.gavinwye.com/server/cloudflare.mjs -o cloudflare.mjs
+curl -fsSL https://notis.gavinwye.com/v<version>/server/cloudflare.mjs -o cloudflare.mjs
 wrangler kv namespace create COMMENTS   # note the id it prints
 ```
 
@@ -99,7 +103,7 @@ Add the binding and a route for `<site>/api/comments*` to `wrangler.toml` (the R
 **Node**
 
 ```bash
-curl -fsSL https://notis.gavinwye.com/server/node.mjs -o notis-server.mjs
+curl -fsSL https://notis.gavinwye.com/v<version>/server/node.mjs -o notis-server.mjs
 COMMENTS_ADMIN_TOKEN=... COMMENTS_DIR=/data node notis-server.mjs
 ```
 
@@ -130,6 +134,8 @@ They are kept on the user's own host: Netlify Blobs (store `COMMENTS_STORE`, def
 4. Open the page in a private window. The note should be there too.
 
 Report back with what you changed, what you checked, and anything the user must do (for example, setting the token).
+
+Tell the user how to update later: they can ask a coding agent "Update Notis in this site. Follow the instructions at https://notis.gavinwye.com/update.md". Copied files only change when someone updates them, and server updates can be security fixes, so it's worth doing when a new version is released.
 
 ## Options
 

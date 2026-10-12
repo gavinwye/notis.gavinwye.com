@@ -8,7 +8,7 @@ A released version is immutable. Its files live at `https://notis.gavinwye.com/v
 
 1. **Pick the version** (semantic: fixes `0.2.1`, features `0.3.0`, breaking changes `1.0.0`).
 2. **Set it in both places.** `package.json` `version` and `var VERSION = "x.y.z";` at the top of `public/comments.js`. The build stops if they differ.
-3. **Update `CHANGELOG.md`.** Move the entries from the unreleased section under the new version and date, and add the link at the bottom.
+3. **Update `CHANGELOG.md`.** Move the entries from the unreleased section under the new version and date, and add the link at the bottom. Start the entry with one line, **Widget: yes/no. Server: yes/no.**, saying which of the user's files change in this release. People who copied the files read it to decide what to replace (see `site/update.md`), so state it for every release. To check, compare the new archive with the previous one ignoring the `VERSION` line: `releases/v<new>/comments.js` against `releases/v<old>/comments.js`, and `releases/v<new>/server/*.mjs` against the old ones. A server change can be a security fix, so say so.
 4. **Check.** `npm test`, then `node scripts/build.mjs --site /tmp/notis-site` and look at `/tmp/notis-site/version.json`.
 5. **Merge to `main`** through a pull request. The site deploys and publishes `/v<version>/…` and updates the unversioned files.
 6. **Archive the version.** From a clean checkout of `main`:

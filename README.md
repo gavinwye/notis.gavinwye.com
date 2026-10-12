@@ -60,27 +60,37 @@ Add Notis to this site. Follow the instructions at https://notis.gavinwye.com/in
 
 ## Add it to a page
 
-Before `</body>`:
+Copy the widget into your own site, then add one line before `</body>`:
 
 ```html
 <script src="/comments.js" defer></script>
 ```
 
-Out of the box it keeps one thread list per URL path and stores them through `/api/comments`.
+The file runs from your own server: visitors never contact notis.gavinwye.com, and it only changes when you change it. Out of the box it keeps one thread list per URL path and stores them through `/api/comments`.
 
-### Pin a version
+### Get the file
 
-The script at `https://notis.gavinwye.com/comments.js` changes when a new version is released. For anything you don't want to change under you, use the versioned address, which never changes, and add its integrity hash so the browser refuses a file that doesn't match:
+`https://notis.gavinwye.com/version.json` lists the current version, its address, its checksum and the server files. Download the versioned file into your site's static folder and check it:
+
+```bash
+curl -fsSL https://notis.gavinwye.com/v0.3.1/comments.js -o public/comments.js
+curl -fsSL https://notis.gavinwye.com/v0.3.1/comments.js.sri       # should equal:
+openssl dgst -sha384 -binary public/comments.js | openssl base64 -A
+```
+
+Everything under `/v<version>/` is immutable: the same address always returns the same bytes, so a copy that matches the checksum is exactly what was released. (Use the version `version.json` shows; `v0.3.1` here is the latest at the time of writing.)
+
+**Just trying it?** You can load it straight from this site instead. This is not recommended for production, because every visitor's browser then fetches the file from notis.gavinwye.com, so your page depends on it being up and the Notis site sees each visit. Use the versioned address with its integrity hash, so the browser refuses a file that doesn't match:
 
 ```html
-<script src="https://notis.gavinwye.com/v0.3.0/comments.js"
-        integrity="sha384-zBFcKQGAPWicStoMgHXnnyyqshoLQQG6d6go9c5XQ1c9/rsXEowFE0twoWjJStln"
+<script src="https://notis.gavinwye.com/v0.3.1/comments.js"
+        integrity="sha384-O1JkOvtU6pF5DrL2wz0QKOsFJ2PznDX1e9ltLKMkvpAU6K23JvK/OtFatbqlw7DA"
         crossorigin="anonymous" defer></script>
 ```
 
-The ready-made tag, with the real hash, is at `https://notis.gavinwye.com/v0.3.0/snippet.html`. `https://notis.gavinwye.com/version.json` lists the current version, its hash and the server files. You can also keep your own copy: `curl -O https://notis.gavinwye.com/v0.3.0/comments.js`.
+The ready-made tag for the current version is at `https://notis.gavinwye.com/v<version>/snippet.html`.
 
-It's also prepared for npm as `@gavinwye/notis`: the widget is `@gavinwye/notis/comments.js`, and the servers are under `@gavinwye/notis/server/…`. (Not published yet.)
+It's also prepared for npm as `@gavinwye/notis`: the widget is `@gavinwye/notis/comments.js`, and the servers are under `@gavinwye/notis/server/…`. It's not published yet, so for now use the copy above.
 
 ### Options
 
@@ -124,6 +134,24 @@ The widget fires events on `document`, so a page can react to a note, for exampl
 | `comments:created` | `{ thread }` | a comment was posted |
 | `comments:replied` | `{ id }` | a reply was posted |
 | `comments:resolved` | `{ id, resolved }` | a thread was resolved or reopened |
+
+## Keeping it up to date
+
+A copied file only changes when you change it, so you choose when to update. When a new version comes out, replace the widget file and the server file together: a server update can be a security fix (0.3.1 was), so don't skip it because the widget looks fine.
+
+The quickest way is to ask an agent working in your site's folder:
+
+```
+Update Notis in this site. Follow the instructions at https://notis.gavinwye.com/update.md
+```
+
+[`site/update.md`](site/update.md) is written for the agent. It finds your copies, reads their versions, compares them with the latest, reads the changelog for what changed, replaces the files, keeps your settings and checks your notes are still there. It never deletes stored notes.
+
+To check by hand:
+
+- **Which version do I have?** Type `NotisVersion` in the browser console, or read the `var VERSION = "…"` line at the top of `comments.js`. The server files have no version line; `update.md` explains how to match them against a release.
+- **What's the latest?** `https://notis.gavinwye.com/version.json`, the [GitHub releases](https://github.com/gavinwye/notis.gavinwye.com/releases) (watch the repository for releases to be told), and the [changelog](CHANGELOG.md). Each changelog entry begins with **Widget: yes/no. Server: yes/no.** so you can see which of your files must be replaced.
+- **npm:** the package is prepared but not published yet. Once it is, `npm update @gavinwye/notis` (or Dependabot or Renovate) will bring updates as pull requests.
 
 ## Run your own server
 
