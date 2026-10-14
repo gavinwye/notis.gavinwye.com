@@ -650,6 +650,14 @@
       'mark.cmt-pending{font:inherit;color:#0b0c0c;background:#ffd94d;border-bottom:2px dashed #0b0c0c;padding:0 1px}' +
       '.cmt-composer.cmt-sheet .cmt-btn{padding:10px 18px;font-size:16px}.cmt-composer.cmt-sheet .cmt-cancel{padding:10px 12px;font-size:16px}' +
       '.cmt-composer .cmt-cancel{background:none;border:0;color:#505a5f;font-weight:600;cursor:pointer;min-height:24px}' +
+      // Theme hooks. Late rules override the defaults without making pages copy this stylesheet.
+      '.cmt-toggle,.cmt-btn,.cmt-selbtn,.cmt-selbar,.cmt-pin,.cmt-head{background:var(--notis-accent,#ffc726);color:var(--notis-ink,#0b0c0c);border-color:var(--notis-ink,#0b0c0c)}' +
+      '.cmt-panel,.cmt-composer,.cmt-foot{background:var(--notis-panel,#fff);color:var(--notis-panel-ink,#0b0c0c);border-color:var(--notis-ink,#0b0c0c)}' +
+      '.cmt-panel .cmt-body,.cmt-panel .cmt-actions button,.cmt-panel .cmt-selpanel,.cmt-composer .cmt-label{color:var(--notis-panel-ink,#0b0c0c)}' +
+      '.cmt-sub,.cmt-empty,.cmt-quote,.cmt-meta,.cmt-help,.cmt-compact .cmt-q,.cmt-compact .cmt-who,.cmt-composer .cmt-cancel{color:var(--notis-panel-muted,#505a5f)}' +
+      '.cmt-quote,.cmt-compact .cmt-q{border-left-color:var(--notis-accent,#ffc726)}.cmt-thread.cmt-active{box-shadow:inset 4px 0 0 var(--notis-accent,#ffc726)}' +
+      '.cmt-actions button,.cmt-sub .cmt-selpanel,.cmt-compact .cmt-link{text-decoration-color:var(--notis-accent,#ffc726)}' +
+      'input[data-cmt]:not([type=checkbox]):focus,textarea[data-cmt]:focus{border-bottom-color:var(--notis-accent,#ffc726)!important}' +
       // Reduced motion: no sliding or pulsing. The flash becomes a steady outline.
       '@media (prefers-reduced-motion:reduce){.cmt-panel,.cmt-panel:not(.cmt-open){transition:none}body{transition:none !important}' +
         'mark.cmt-hl.cmt-flash,.cmt-pin.cmt-flash{animation:none;outline:3px solid #0b0c0c;outline-offset:2px}}' +

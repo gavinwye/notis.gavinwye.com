@@ -131,11 +131,20 @@ This enables it automatically on Netlify previews. Elsewhere, send reviewers a l
 
 ### Fonts and colours
 
-The widget loads no font of its own. It sets its text in `--notis-font` if your page defines it, then in Barlow if your page has loaded it, then in the system font:
+The widget loads no font of its own. Set these CSS custom properties on your page to match its brand, including a dark panel:
 
 ```css
-:root { --notis-font: "Inter", system-ui, sans-serif; }
+:root {
+  --notis-font: "Inter", system-ui, sans-serif;
+  --notis-accent: #8b5cf6;
+  --notis-ink: #111827;
+  --notis-panel: #111827;
+  --notis-panel-ink: #f9fafb;
+  --notis-panel-muted: #cbd5e1;
+}
 ```
+
+Every property is optional. The defaults keep Notis's yellow, black and white theme.
 
 ### Events
 
