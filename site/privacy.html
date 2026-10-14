@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy and data — Notis</title>
+<meta name="description" content="What Notis stores, where it is kept, and how to delete it.">
+<link rel="canonical" href="https://notis.gavinwye.com/privacy.html">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root { color-scheme:light dark; --paper:#fff; --ink:#0b0c0c; --muted:#4b5559; --line:#d8dde0; --mark:#ffc726; }
+  @media (prefers-color-scheme:dark) { :root { --paper:#111517; --ink:#f1f3f4; --muted:#aab3b7; --line:#2f373b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.55 system-ui,sans-serif; }
+  header, main, footer { max-width:720px; margin:auto; padding:24px 20px; }
+  header { border-bottom:1px solid var(--line); }
+  main { padding-top:48px; padding-bottom:48px; }
+  footer { border-top:1px solid var(--line); color:var(--muted); font-size:15px; }
+  h1 { font-size:clamp(38px,8vw,64px); line-height:1.05; margin:0 0 24px; }
+  h2 { font-size:26px; margin:32px 0 8px; }
+  p, ul { margin:0 0 16px; }
+  li { margin-bottom:8px; }
+  a { color:inherit; text-decoration-color:var(--mark); text-decoration-thickness:2px; text-underline-offset:3px; }
+  code { font-family:ui-monospace,monospace; font-size:.9em; }
+</style>
+</head>
+<body>
+<header><a href="/">← Notis</a></header>
+<main>
+  <h1>Privacy and data</h1>
+  <p>Notis has no central service and does not receive a copy of your notes. The site owner chooses and operates the storage.</p>
+
+  <h2>What a note stores</h2>
+  <ul>
+    <li>The page identifier, selected words and a short amount of nearby text.</li>
+    <li>The name a reviewer typed, their note and any replies.</li>
+    <li>Creation timestamps and whether the thread is resolved.</li>
+    <li>For image pins, the image URL, image number and pin coordinates.</li>
+  </ul>
+  <p>Notis does not require accounts or email addresses and the widget has no analytics of its own.</p>
+
+  <h2>Where it is kept</h2>
+  <p>Shared notes stay in the site owner's Netlify Blobs store, Cloudflare KV namespace or Node data folder. Browser-only demos use that visitor's local browser storage. The Notis website never receives notes left on another site.</p>
+
+  <h2>Who can read it</h2>
+  <p>Anyone who can load the review page can normally read that page's notes and leave a note. Notes are not confidential unless the site owner protects both the page and its comments API.</p>
+
+  <h2>Deleting and exporting</h2>
+  <p>The site owner can export all notes with the admin token, delete one thread, or clear the complete store through the documented API. Ask the site owner—not Notis—to remove a note from their installation.</p>
+
+  <h2>For site owners</h2>
+  <p>Tell reviewers why you collect their feedback, who can see it and how long you keep it. The technical details and deletion commands are in the <a href="https://github.com/gavinwye/notis.gavinwye.com#where-your-notes-live">README</a>.</p>
+</main>
+<footer>Notis is open source and MIT licensed. <a href="https://github.com/gavinwye/notis.gavinwye.com">View the source</a>.</footer>
+</body>
+</html>

@@ -213,10 +213,15 @@ The built-in ceilings limit accidental floods, but public anonymous comments sti
 
 On your own host, in your own account. On Netlify that's a [Netlify Blobs](https://docs.netlify.com/blobs/overview/) store (named `comments`, or whatever `COMMENTS_STORE` says), one blob per thread under `t/<id>`. On Cloudflare it's your KV namespace, and on Node it's a folder of JSON files. Nobody else holds a copy: there is no central Notis service, and the Notis site never sees your comments.
 
+Each thread stores the page identifier, selected words and nearby context, the name the reviewer typed, note and reply text, timestamps, resolved state and—when used—an image URL and pin coordinates. Notis does not collect email addresses, accounts or analytics. The site owner is responsible for telling reviewers how this data is used and how long it is kept.
+
 - **One store for the whole site.** Production and deploy previews share it. A comment left on a preview also shows on any page with the same `pageId` in production. Use a different `COMMENTS_STORE` per site, and give previews their own `pageId` if you don't want that.
 - **Export or back up:** `curl -H "Authorization: Bearer $COMMENTS_ADMIN_TOKEN" https://your-site/api/comments > comments-backup.json` works on any host. On Netlify you can also use `netlify blobs:list comments`.
 - **Read them while running locally:** `netlify dev` uses a local sandbox, so notes left there don't reach your live site.
 - **The demo is different.** With `apiBase: null` (as on the Notis site), notes stay in each visitor's browser and are never sent anywhere.
+- **Delete data:** delete one thread with the authenticated `DELETE /api/comments/<id>` endpoint, or delete every thread with authenticated `DELETE /api/comments`. See [Moderation](#moderation-delete) below.
+
+The short public explanation is at [notis.gavinwye.com/privacy.html](https://notis.gavinwye.com/privacy.html).
 
 ### Analytics
 
