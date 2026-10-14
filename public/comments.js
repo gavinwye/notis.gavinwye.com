@@ -528,6 +528,17 @@
       announce('Could not load the ' + NOUNS + '.');
     });
   }
+  var polling = false;
+  function hasDraft() {
+    if (composer) return true;
+    if (!panel) return false;
+    return Array.prototype.some.call(panel.querySelectorAll('textarea'), function (field) { return field.value.trim(); });
+  }
+  function poll() {
+    if (document.hidden || polling || hasDraft()) return;
+    polling = true;
+    refresh().then(function () { polling = false; }, function () { polling = false; });
+  }
   // A short message with a Retry button, announced to screen readers (role=alert).
   function inlineError(parent, text, retry) {
     Array.prototype.slice.call(parent.children).forEach(function (c) { if (c.classList && c.classList.contains('cmt-error')) c.remove(); });
@@ -1279,6 +1290,9 @@
     buildUI();
     if (COMMENTS_CONFIG.dock && recall('comments:open') === '1') openPanel();
     refresh();
+    setInterval(poll, 25000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+    window.addEventListener('focus', poll);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

@@ -21,6 +21,7 @@ It was built to get fast reactions to early prototypes.
 - **Pins on images.** Choose Pin on image in the panel and click the spot you mean. The pin stays at that point when the image is resized.
 - **Threads.** Replies, resolve and reopen, and a toggle to show resolved ones.
 - **Shared.** Everyone who opens the page sees the same notes.
+- **Updates while you review.** Notis checks for new notes every 25 seconds while the page is visible and again when you return to it. It pauses while a draft is being written.
 - **A JSON API.** A script (or an AI assistant) can read the open notes and work through them. See [Closing the loop](#closing-the-loop).
 - **One file in, one file out.** `comments.js` has no dependencies and injects its own styles.
 
