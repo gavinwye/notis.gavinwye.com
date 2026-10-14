@@ -9,6 +9,7 @@ All notable changes to Notis. The format follows [Keep a Changelog](https://keep
 ### Added
 - Optional reviewer activation by remembered query flag or hostname pattern. ([#35](https://github.com/gavinwye/notis.gavinwye.com/issues/35))
 - General page notes, created from the panel and shown above anchored notes. ([#31](https://github.com/gavinwye/notis.gavinwye.com/issues/31))
+- New notes appear without a reload: the widget checks every 25 seconds while visible and on focus, without replacing a draft reply. ([#33](https://github.com/gavinwye/notis.gavinwye.com/issues/33))
 
 ## [0.3.2] - 2026-10-12
 
