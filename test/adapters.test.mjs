@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createHandler } from "../server/core.mjs";
 import { storageFor as netlifyStorage } from "../server/netlify.mjs";
 import { storageFor as kvStorage } from "../server/cloudflare.mjs";
+import { storageFor as vercelStorage } from "../server/vercel.mjs";
 
 // Small fakes with the same shape as the real Netlify Blobs store and a Workers KV namespace.
 function fakeBlobs(initial = {}) {
@@ -22,6 +23,16 @@ function fakeKV() {
     put: async (k, v) => { m.set(k, v); },
     delete: async (k) => { m.delete(k); },
     list: async ({ prefix = "" } = {}) => ({ keys: [...m.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })), list_complete: true }),
+  };
+}
+function fakeVercelBlob() {
+  const m = new Map();
+  return {
+    m,
+    get: async (pathname) => m.has(pathname) ? { stream: new Response(m.get(pathname)).body } : null,
+    put: async (pathname, body) => { m.set(pathname, body); return { pathname }; },
+    del: async (paths) => { for (const pathname of Array.isArray(paths) ? paths : [paths]) m.delete(pathname); },
+    list: async ({ prefix = "" } = {}) => ({ blobs: [...m.keys()].filter((pathname) => pathname.startsWith(prefix)).map((pathname) => ({ pathname })), hasMore: false }),
   };
 }
 
@@ -45,6 +56,7 @@ async function roundTrip(storage) {
 
 test("netlify blobs adapter", async () => { await roundTrip(netlifyStorage(fakeBlobs())); });
 test("cloudflare kv adapter", async () => { await roundTrip(kvStorage(fakeKV())); });
+test("vercel blob adapter", async () => { await roundTrip(vercelStorage(fakeVercelBlob())); });
 
 test("netlify adapter moves an older single-blob store to one blob per thread", async () => {
   const legacy = [{ id: "abc123def", pageId: "/p", text: "old", quote: "", replies: [], createdAt: 1, resolved: false }];

@@ -86,8 +86,9 @@ Work out the host from the repo (a `netlify.toml`, a `wrangler.toml`, a Dockerfi
 | **Browser only** | A quick demo. Notes aren't shared: each browser keeps its own. | none. Add `<script>window.COMMENTS_CONFIG = { apiBase: null };</script>` before the script tag |
 | **Netlify** | The site is on Netlify. | `servers.netlify` from version.json |
 | **Cloudflare Workers** | The site is on Cloudflare. | `servers.cloudflare` from version.json |
+| **Vercel** | The site is on Vercel. | `servers.vercel` from version.json |
 | **Node** | A server, a VPS, Docker, Fly, Railway. | `servers.node` from version.json |
-| **Something else** | Vercel, static hosting, and so on | Run the Node file somewhere, and set `apiBase` to its address. Tell the user it needs a small always-on server. |
+| **Something else** | Static hosting without functions, and so on | Run the Node file somewhere, and set `apiBase` to its address. Tell the user it needs a small always-on server. |
 
 ## 5. Set up the server
 
@@ -121,6 +122,26 @@ routes = [{ pattern = "your-site.example/api/comments*", zone_name = "your-site.
 ```
 
 Then `wrangler secret put COMMENTS_ADMIN_TOKEN` and `wrangler deploy`. To try it first, `wrangler dev --local` serves the Worker on a local port. The binding must be called `COMMENTS`.
+
+**Vercel**
+
+Create and connect a **private** Blob store in the Vercel project's Storage tab, then:
+
+```bash
+mkdir -p api
+curl -fsSL https://notis.gavinwye.com/v<version>/server/vercel.mjs -o api/comments.js
+npm install @vercel/blob
+```
+
+Add a rewrite so nested routes such as replies reach the same function:
+
+```json
+{
+  "rewrites": [{ "source": "/api/comments/:path*", "destination": "/api/comments" }]
+}
+```
+
+Vercel supplies `BLOB_READ_WRITE_TOKEN` when the store is connected. The store must be private because notes can contain review material.
 
 **Node**
 

@@ -190,6 +190,7 @@ The buttons copy the repository into your account. Netlify needs a Blobs store; 
 |---|---|---|---|
 | **Netlify** | [`server/netlify.mjs`](server/netlify.mjs) | Netlify Blobs, in your account | Drop it in `netlify/functions/comments.mjs`, `npm i @netlify/blobs` |
 | **Cloudflare Workers** | [`server/cloudflare.mjs`](server/cloudflare.mjs) | a Workers KV namespace bound as `COMMENTS` | Route `your-site/api/comments*` to the Worker |
+| **Vercel** | [`server/vercel.mjs`](server/vercel.mjs) | a private Vercel Blob store | Put it at `api/comments.js`, `npm i @vercel/blob`, and route `/api/comments*` to it |
 | **Any Node 18+ server** | [`server/node.mjs`](server/node.mjs) | JSON files in a folder (`COMMENTS_DIR`) | `node server.mjs`. Works in Docker, on a VPS, on Fly or Railway |
 | **Browser only** | none | each reviewer's own browser | `apiBase: null`. Not shared |
 
@@ -240,7 +241,7 @@ The built-in ceilings limit accidental floods, but public anonymous comments sti
 
 ## Where your notes live
 
-On your own host, in your own account. On Netlify that's a [Netlify Blobs](https://docs.netlify.com/blobs/overview/) store (named `comments`, or whatever `COMMENTS_STORE` says), one blob per thread under `t/<id>`. On Cloudflare it's your KV namespace, and on Node it's a folder of JSON files. Nobody else holds a copy: there is no central Notis service, and the Notis site never sees your comments.
+On your own host, in your own account. On Netlify that's a [Netlify Blobs](https://docs.netlify.com/blobs/overview/) store (named `comments`, or whatever `COMMENTS_STORE` says), one blob per thread under `t/<id>`. On Cloudflare it's your KV namespace, on Vercel it's a private Blob store, and on Node it's a folder of JSON files. Nobody else holds a copy: there is no central Notis service, and the Notis site never sees your comments.
 
 Each thread stores the page identifier, selected words and nearby context, the name the reviewer typed, note and reply text, timestamps, resolved state and—when used—an image URL and pin coordinates. Notis does not collect email addresses, accounts or analytics. The site owner is responsible for telling reviewers how this data is used and how long it is kept.
 
