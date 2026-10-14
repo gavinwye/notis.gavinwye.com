@@ -12,6 +12,9 @@ All notable changes to Notis. The format follows [Keep a Changelog](https://keep
 - New notes appear without a reload: the widget checks every 25 seconds while visible and on focus, without replacing a draft reply. ([#33](https://github.com/gavinwye/notis.gavinwye.com/issues/33))
 - Copy a page-ordered Markdown review or download its threads as JSON from the panel. ([#42](https://github.com/gavinwye/notis.gavinwye.com/issues/42))
 
+### Removed
+- The undocumented and untested Supabase client adapter. Use the tested Netlify, Cloudflare, Node or browser-only storage paths. ([#39](https://github.com/gavinwye/notis.gavinwye.com/issues/39))
+
 ## [0.3.2] - 2026-10-12
 
 **Widget: no** (only its version number changes). **Server: yes** (on every host; it removes a way to lose every note by mistake, so don't skip it).

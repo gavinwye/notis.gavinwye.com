@@ -115,7 +115,6 @@ Set them with a global before the script, or with `data-*` attributes on the tag
 | `pins` | `true` | Let reviewers drop a pin on an image. Set `false` to turn it off. |
 | `noun` | `"note"` | What things left on the page are called on screen: Notes, Add a note, and so on. Set `"comment"` to get Comments and Add a comment. |
 | `dock` | `false` | Push the page over to make room for the panel, rather than covering it. |
-| `supabase` | `null` | `{ url, anonKey }` to use Supabase instead of the Netlify function. |
 | `activation` | `null` | Optional reviewer gate: `{ query: "notis", hosts: ["*.netlify.app"] }`. A matching host or `?notis=1` enables Notis and remembers it; `?notis=0` disables it again. |
 
 To keep Notis hidden on an ordinary production page but available to reviewers:
@@ -330,7 +329,6 @@ Worth knowing before you rely on it.
 - **Not for high traffic.** It's built for a handful of reviewers, not for a public comment section.
 - **Text that moves a lot loses its anchor.** The note survives; the highlight doesn't.
 - **Pins are for `<img>` elements.** Not CSS backgrounds or inline SVG. A pin finds its image by `src`, so if the image changes, the pin is shown as lost.
-- **Pins need the Netlify function or localStorage.** The Supabase adapter would need a `pin` column.
 
 ## Layout
 
