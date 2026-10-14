@@ -32,9 +32,7 @@
      activation optional { query, hosts } reviewer gate. A matching host or
                ?<query>=1 enables Notis and remembers it in this browser;
                ?<query>=0 turns it off again.
-     supabase  { url, anonKey } to use Supabase instead of the API
-               (leave null to use apiBase; set apiBase null to fall back
-               to browser-only localStorage)
+     Set apiBase null to use browser-only localStorage.
 
    ── Events (dispatched on document) ────────────────────────────────
      comments:created   detail:{ thread }  a comment was posted
@@ -68,7 +66,6 @@
   defaultPath = defaultPath.replace(/\/+$/, "") || "/";
 
   var COMMENTS_CONFIG = Object.assign({
-    supabase: null,
     apiBase: "/api",
     pageId: defaultPath,
     root: "body",
@@ -146,35 +143,9 @@
       }
     };
   }
-  function SupabaseStore(cfg, pageId) {
-    var base = cfg.url.replace(/\/$/, "") + "/rest/v1";
-    var h = { apikey: cfg.anonKey, Authorization: "Bearer " + cfg.anonKey, "Content-Type": "application/json" };
-    function j(r) { if (!r.ok) return r.text().then(function (t) { throw new Error("Supabase " + r.status + ": " + t); }); return r.json(); }
-    return {
-      list: function () {
-        return fetch(base + "/comments?pageId=eq." + encodeURIComponent(pageId) + "&order=createdAt.asc", { headers: h }).then(j);
-      },
-      create: function (thread) {
-        return fetch(base + "/comments", { method: "POST", headers: Object.assign({ Prefer: "return=representation" }, h), body: JSON.stringify(thread) })
-          .then(j).then(function (rows) { return rows[0]; });
-      },
-      reply: function (id, reply) {
-        return fetch(base + "/comments?id=eq." + id + "&select=replies", { headers: h }).then(j).then(function (rows) {
-          var reps = (rows[0] && rows[0].replies) || []; reps.push(reply);
-          return fetch(base + "/comments?id=eq." + id, { method: "PATCH", headers: h, body: JSON.stringify({ replies: reps }) });
-        }).then(function () { return reply; });
-      },
-      setResolved: function (id, resolved) {
-        return fetch(base + "/comments?id=eq." + id, { method: "PATCH", headers: h, body: JSON.stringify({ resolved: resolved }) });
-      }
-    };
-  }
-
-  var store = (COMMENTS_CONFIG.supabase && COMMENTS_CONFIG.supabase.url)
-    ? SupabaseStore(COMMENTS_CONFIG.supabase, COMMENTS_CONFIG.pageId)
-    : COMMENTS_CONFIG.apiBase
-      ? ApiStore(COMMENTS_CONFIG.apiBase, COMMENTS_CONFIG.pageId)
-      : LocalStore(COMMENTS_CONFIG.pageId);
+  var store = COMMENTS_CONFIG.apiBase
+    ? ApiStore(COMMENTS_CONFIG.apiBase, COMMENTS_CONFIG.pageId)
+    : LocalStore(COMMENTS_CONFIG.pageId);
 
   /* ---------- helpers ---------- */
   var uid = function () { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); };
