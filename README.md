@@ -113,6 +113,19 @@ Set them with a global before the script, or with `data-*` attributes on the tag
 | `noun` | `"note"` | What things left on the page are called on screen: Notes, Add a note, and so on. Set `"comment"` to get Comments and Add a comment. |
 | `dock` | `false` | Push the page over to make room for the panel, rather than covering it. |
 | `supabase` | `null` | `{ url, anonKey }` to use Supabase instead of the Netlify function. |
+| `activation` | `null` | Optional reviewer gate: `{ query: "notis", hosts: ["*.netlify.app"] }`. A matching host or `?notis=1` enables Notis and remembers it; `?notis=0` disables it again. |
+
+To keep Notis hidden on an ordinary production page but available to reviewers:
+
+```html
+<script>
+window.COMMENTS_CONFIG = {
+  activation: { query: "notis", hosts: ["*.netlify.app"] }
+};
+</script>
+```
+
+This enables it automatically on Netlify previews. Elsewhere, send reviewers a link ending in `?notis=1`; later visits on that hostname stay enabled in the same browser. This controls whether the widget loads—it is not authentication. Protect the page and API when notes must be private.
 
 ### Fonts and colours
 

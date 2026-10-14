@@ -29,6 +29,9 @@
      pins      true to let reviewers drop a pin on an image   (default true)
      noun      what a thing left on the page is called        (default "note";
                set "comment" for Comments / Add a comment)
+     activation optional { query, hosts } reviewer gate. A matching host or
+               ?<query>=1 enables Notis and remembers it in this browser;
+               ?<query>=0 turns it off again.
      supabase  { url, anonKey } to use Supabase instead of the API
                (leave null to use apiBase; set apiBase null to fall back
                to browser-only localStorage)
@@ -54,7 +57,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "0.3.2";
+  var VERSION = "0.4.0";
   window.NotisVersion = VERSION; // quote this when reporting a bug
   var script = document.currentScript;
   function dataAttr(name) { return script ? script.getAttribute(name) : null; }
@@ -71,7 +74,8 @@
     root: "body",
     dock: false,
     pins: true,
-    noun: "note"
+    noun: "note",
+    activation: null
   }, window.COMMENTS_CONFIG || {});
 
   if (dataAttr("data-api-base") != null) COMMENTS_CONFIG.apiBase = dataAttr("data-api-base");
@@ -80,6 +84,28 @@
   if (dataAttr("data-pins") != null) COMMENTS_CONFIG.pins = dataAttr("data-pins") !== "false";
   if (dataAttr("data-dock") != null) COMMENTS_CONFIG.dock = dataAttr("data-dock") !== "false";
   if (dataAttr("data-noun") != null) COMMENTS_CONFIG.noun = dataAttr("data-noun");
+
+  // Optional reviewer gate. With no activation setting Notis behaves exactly
+  // as before. A query flag is remembered per hostname; host patterns accept
+  // exact names or a leading wildcard such as *.netlify.app.
+  function hostMatches(pattern) {
+    pattern = String(pattern || "").toLowerCase();
+    var host = location.hostname.toLowerCase();
+    return pattern.indexOf("*.") === 0
+      ? host === pattern.slice(2) || host.endsWith(pattern.slice(1))
+      : host === pattern;
+  }
+  function activated(setting) {
+    if (!setting) return true;
+    var query = String(setting.query || "notis");
+    var key = "notis:enabled:" + location.hostname;
+    var flag = new URLSearchParams(location.search).get(query);
+    if (flag === "1") remember(key, "1");
+    if (flag === "0") remember(key, "0");
+    var hosts = Array.isArray(setting.hosts) ? setting.hosts : [];
+    return flag === "1" || recall(key) === "1" || hosts.some(hostMatches);
+  }
+  if (!activated(COMMENTS_CONFIG.activation)) return;
 
   // What the things people leave are called on screen: "note" by default.
   // A site that prefers "comment" sets noun: "comment". The plural adds an s.
