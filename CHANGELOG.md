@@ -2,6 +2,13 @@
 
 All notable changes to Notis. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+**Widget: yes. Server: no.**
+
+### Added
+- Optional reviewer activation by remembered query flag or hostname pattern. ([#35](https://github.com/gavinwye/notis.gavinwye.com/issues/35))
+
 ## [0.3.2] - 2026-10-12
 
 **Widget: no** (only its version number changes). **Server: yes** (on every host; it removes a way to lose every note by mistake, so don't skip it).
