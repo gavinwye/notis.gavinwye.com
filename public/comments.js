@@ -326,6 +326,7 @@
     found = {}; placed = {};
     threads.forEach(function (t) {
       if (t.pin) return; // pinned to an image; renderPins() places these
+      if (!String(t.quote || "").trim()) { found[t.id] = true; return; }
       var loc = locate(ix, t);
       if (!loc || loc.end <= loc.start) return;
       found[t.id] = true; placed[t.id] = loc.start;
@@ -376,6 +377,9 @@
     });
     var created = function (r) { return r.t.createdAt || 0; };
     rows.sort(function (a, b) {
+      var ag = !a.t.pin && !String(a.t.quote || '').trim();
+      var bg = !b.t.pin && !String(b.t.quote || '').trim();
+      if (ag !== bg) return ag ? -1 : 1;
       // anything that can't be placed any more goes last, oldest first
       if (!a.n || !b.n) {
         if (!a.n && !b.n) return created(a) - created(b);
@@ -707,7 +711,9 @@
     var lbl = el('label', '', 'Show resolved'); lbl.setAttribute('for', 'cmt-showres');
     var selPanel = el('button', 'cmt-selpanel', 'Add ' + NOUN + ' on selection'); selPanel.type = 'button';
     selPanel.addEventListener('click', function () { commentOnSelection(); });
-    sub.appendChild(resolvedChk); sub.appendChild(lbl); sub.appendChild(selPanel);
+    var general = el('button', 'cmt-selpanel', 'Add general ' + NOUN); general.type = 'button';
+    general.addEventListener('click', function () { openComposer({ quote: "", prefix: "", suffix: "" }, general.getBoundingClientRect()); });
+    sub.appendChild(resolvedChk); sub.appendChild(lbl); sub.appendChild(selPanel); sub.appendChild(general);
     listEl = el('ul', 'cmt-list'); listEl.setAttribute('role', 'list'); listEl.setAttribute('aria-label', cap(NOUNS) + ' on this page');
     var foot = el('div', 'cmt-foot');
     var closeBtn = el('button', 'cmt-btn cmt-footclose', 'Close');
@@ -798,6 +804,7 @@
   function threadLabel(t) {
     if (t.pin) return 'Pin ' + (t.pinNumber || '') + ' on ' + imageLabel(t.pin);
     var q = String(t.quote || '').replace(/\s+/g, ' ').trim();
+    if (!q) return 'General page ' + NOUN;
     return '“' + (q.length > 50 ? q.slice(0, 50) + '…' : q) + '”';
   }
   function renderPanel() {
@@ -812,9 +819,10 @@
       var label = threadLabel(t), qid = 'cmt-q-' + t.id;
       box.setAttribute('aria-labelledby', qid);
       if (t.resolved) box.appendChild(el('span', 'cmt-state', 'Resolved'));
-      var q = el('div', 'cmt-quote', t.pin ? label : '“' + t.quote + '”'); q.id = qid;
+      var general = !t.pin && !String(t.quote || '').trim();
+      var q = el('div', 'cmt-quote', t.pin ? label : general ? 'General' : '“' + t.quote + '”'); q.id = qid;
       box.appendChild(q);
-      if (!found[t.id]) box.appendChild(el('div', 'cmt-lost', t.pin ? 'This image is no longer on the page.' : 'This text has changed since the ' + NOUN + ' was left.'));
+      if (!general && !found[t.id]) box.appendChild(el('div', 'cmt-lost', t.pin ? 'This image is no longer on the page.' : 'This text has changed since the ' + NOUN + ' was left.'));
       box.appendChild(msg(t.author, t.text, t.createdAt));
       (t.replies || []).forEach(function (r) { box.appendChild(msg(r.author, r.text, r.createdAt)); });
       var actions = el('div', 'cmt-actions');
@@ -838,7 +846,7 @@
         });
       }
       resBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleResolved(); });
-      if (found[t.id]) {
+      if (!general && found[t.id]) {
         var goBtn = el('button', '', t.pin ? 'Go to pin' : 'Go to text'); goBtn.type = 'button';
         goBtn.setAttribute('aria-label', (t.pin ? 'Go to the pin: ' : 'Go to the text: ') + label);
         goBtn.addEventListener('click', function (e) { e.stopPropagation(); goTo(t.id); });
@@ -1146,7 +1154,9 @@
     var s2 = el('div', 'cmt-step');
     var quote = saved.pin
       ? 'Pin on image: ' + imageLabel(saved.pin)
-      : '“' + saved.quote.slice(0, 70).trim() + (saved.quote.length > 70 ? '…' : '') + '”';
+      : saved.quote
+        ? '“' + saved.quote.slice(0, 70).trim() + (saved.quote.length > 70 ? '…' : '') + '”'
+        : 'General page ' + NOUN;
     var prev = el('div', 'cmt-q', quote);
     var ta = el('textarea'); ta.rows = 2; ta.setAttribute('aria-label', 'Your ' + NOUN); ta.id = 'cmt-new'; ta.enterKeyHint = 'done';
     var row = el('div', 'cmt-row');
