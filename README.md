@@ -17,6 +17,7 @@ It was built to get fast reactions to early prototypes.
 ## What you get
 
 - **Notes on the exact words.** Select text, leave a note. The highlight stays on that text if the page changes slightly.
+- **General page notes.** Leave feedback about the whole page without selecting text or pinning an image.
 - **Pins on images.** Choose Pin on image in the panel and click the spot you mean. The pin stays at that point when the image is resized.
 - **Threads.** Replies, resolve and reopen, and a toggle to show resolved ones.
 - **Shared.** Everyone who opens the page sees the same notes.
