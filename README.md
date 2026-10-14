@@ -23,6 +23,7 @@ It was built to get fast reactions to early prototypes.
 - **Shared.** Everyone who opens the page sees the same notes.
 - **Updates while you review.** Notis checks for new notes every 25 seconds while the page is visible and again when you return to it. It pauses while a draft is being written.
 - **A JSON API.** A script (or an AI assistant) can read the open notes and work through them. See [Closing the loop](#closing-the-loop).
+- **Portable feedback.** Copy the page's notes as Markdown or download them as JSON from the panel.
 - **One file in, one file out.** `comments.js` has no dependencies and injects its own styles.
 
 ## What it looks like
