@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-export const HOSTS = ["netlify", "cloudflare", "node"];
+export const HOSTS = ["netlify", "cloudflare", "vercel", "node"];
 export const SITE_URL = process.env.NOTIS_SITE_URL || "https://notis.gavinwye.com";
 const IMPORT = 'import { createHandler } from "./core.mjs";';
 

@@ -26,6 +26,7 @@
     "./server/core": "./server/core.mjs",
     "./server/netlify": "./server/netlify.mjs",
     "./server/cloudflare": "./server/cloudflare.mjs",
+    "./server/vercel": "./server/vercel.mjs",
     "./server/node": "./server/node.mjs",
     "./dist/server/*": "./dist/server/*",
     "./package.json": "./package.json"
@@ -42,14 +43,19 @@
     "deploy": "netlify deploy --prod"
   },
   "peerDependencies": {
-    "@netlify/blobs": "^10.0.0"
+    "@netlify/blobs": "^10.0.0",
+    "@vercel/blob": "^2.0.0"
   },
   "peerDependenciesMeta": {
     "@netlify/blobs": {
       "optional": true
+    },
+    "@vercel/blob": {
+      "optional": true
     }
   },
   "devDependencies": {
-    "@netlify/blobs": "^10.7.9"
+    "@netlify/blobs": "^10.7.9",
+    "@vercel/blob": "^2.0.0"
   }
 }
