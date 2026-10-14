@@ -727,10 +727,14 @@
     sub.appendChild(resolvedChk); sub.appendChild(lbl); sub.appendChild(selPanel); sub.appendChild(general);
     listEl = el('ul', 'cmt-list'); listEl.setAttribute('role', 'list'); listEl.setAttribute('aria-label', cap(NOUNS) + ' on this page');
     var foot = el('div', 'cmt-foot');
+    var exports = el('div', 'cmt-actions');
+    var copy = el('button', '', 'Copy Markdown'); copy.type = 'button'; copy.addEventListener('click', copyExport);
+    var download = el('button', '', 'Download JSON'); download.type = 'button'; download.addEventListener('click', downloadExport);
+    exports.appendChild(copy); exports.appendChild(download);
     var closeBtn = el('button', 'cmt-btn cmt-footclose', 'Close');
     closeBtn.addEventListener('click', closePanel);
     var help = el('p', 'cmt-help', 'Keyboard: select text, then press Alt+Shift+C. Esc closes.');
-    foot.appendChild(help); foot.appendChild(closeBtn);
+    foot.appendChild(exports); foot.appendChild(help); foot.appendChild(closeBtn);
     panel.appendChild(head); panel.appendChild(sub); panel.appendChild(listEl); panel.appendChild(foot);
     // On a phone, the bottom Close button would sit above the keyboard while someone
     // types a reply and eat the space they need. Hide it until the field loses focus.
@@ -817,6 +821,36 @@
     var q = String(t.quote || '').replace(/\s+/g, ' ').trim();
     if (!q) return 'General page ' + NOUN;
     return '“' + (q.length > 50 ? q.slice(0, 50) + '…' : q) + '”';
+  }
+  function exportMarkdown() {
+    var out = ['# Notes on ' + COMMENTS_CONFIG.pageId, ''];
+    byPosition(threads).forEach(function (t, i) {
+      out.push('## ' + (i + 1) + '. ' + threadLabel(t));
+      if (t.quote) out.push('', '> ' + String(t.quote).replace(/\n/g, '\n> '));
+      out.push('', '**' + t.author + '**: ' + t.text);
+      (t.replies || []).forEach(function (r) { out.push('', '- **' + r.author + '**: ' + r.text); });
+      if (t.resolved) out.push('', '_Resolved_');
+      out.push('');
+    });
+    return out.join('\n');
+  }
+  function copyExport() {
+    var text = exportMarkdown(), done = function () { announce('Notes copied as Markdown'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { fallback(text); });
+    else fallback(text);
+    function fallback(value) {
+      var ta = document.createElement('textarea'); ta.value = value; ta.setAttribute('data-cmt', 'ui');
+      ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { announce('Could not copy notes'); }
+      ta.remove();
+    }
+  }
+  function downloadExport() {
+    var blob = new Blob([JSON.stringify(byPosition(threads), null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'notis-' + String(COMMENTS_CONFIG.pageId).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') + '.json';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+    announce('Notes downloaded as JSON');
   }
   function renderPanel() {
     listEl.innerHTML = '';
