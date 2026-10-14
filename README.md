@@ -181,6 +181,11 @@ To check by hand:
 
 The API is one small piece of code that talks to a storage object, with a short adapter for each host. Pick the one you already use:
 
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/gavinwye/notis.gavinwye.com)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/gavinwye/notis.gavinwye.com)
+
+The buttons copy the repository into your account. Netlify needs a Blobs store; Cloudflare needs a KV namespace bound as `COMMENTS`. Set `COMMENTS_ADMIN_TOKEN` as a secret on either host before allowing deletes.
+
 | Host | File | Kept in | Notes |
 |---|---|---|---|
 | **Netlify** | [`server/netlify.mjs`](server/netlify.mjs) | Netlify Blobs, in your account | Drop it in `netlify/functions/comments.mjs`, `npm i @netlify/blobs` |
@@ -246,6 +251,24 @@ Each thread stores the page identifier, selected words and nearby context, the n
 - **Delete data:** delete one thread with the authenticated `DELETE /api/comments/<id>` endpoint, or delete every thread with authenticated `DELETE /api/comments`. See [Moderation](#moderation-delete) below.
 
 The short public explanation is at [notis.gavinwye.com/privacy.html](https://notis.gavinwye.com/privacy.html).
+
+## FAQ
+
+### Why did a highlight disappear?
+
+Notis finds quoted text again when a page changes. If the words were removed, or the same words now occur in several places, it cannot place the highlight reliably. The note stays in the panel and is marked as detached; export it before deleting it.
+
+### How do I stop people commenting?
+
+Remove `comments.js`, or use `activation` so it only loads on review links or preview hosts. That hides the interface; it is not access control. To make a review private, protect both the page and `/api/comments` with your host's authentication.
+
+### Can I use Notis on a PDF?
+
+Not inside a browser's built-in PDF viewer. Publish the PDF through an HTML viewer that renders selectable text, then load Notis on that page. Image-only scans need OCR first.
+
+### How do I move to another host?
+
+Export all notes with the admin-token command above, deploy the new adapter, then change `apiBase`. Notis can export JSON but does not yet import it automatically, so keep the old endpoint available until you have copied or transformed the stored records.
 
 ### Analytics
 
