@@ -4,11 +4,12 @@
 //   COMMENTS_STORE            store name                (default "comments")
 //   COMMENTS_ADMIN_TOKEN      guards DELETE
 //   COMMENTS_ALLOWED_ORIGINS  comma-separated origins   (default: any)
+//   COMMENTS_DASHBOARD        "public" lets anyone read the dashboard summary (default: admin token only)
 import { getStore } from "@netlify/blobs";
 import { createHandler } from "./core.mjs";
 
 export const config = {
-  path: ["/api/comments", "/api/comments/:id", "/api/comments/:id/replies"],
+  path: ["/api/comments", "/api/comments/dashboard", "/api/comments/:id", "/api/comments/:id/replies"],
 };
 
 const PREFIX = "t/";
@@ -53,6 +54,7 @@ export default async (req) => {
         maxThreadsPerPage: process.env.COMMENTS_MAX_THREADS_PER_PAGE,
         maxRepliesPerThread: process.env.COMMENTS_MAX_REPLIES_PER_THREAD,
         duplicateWindowMs: process.env.COMMENTS_DUPLICATE_WINDOW_MS,
+        dashboard: process.env.COMMENTS_DASHBOARD,
         basePath: "/api/comments",
       },
     });

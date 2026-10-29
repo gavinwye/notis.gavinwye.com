@@ -8,6 +8,7 @@ export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const HOSTS = ["netlify", "cloudflare", "vercel", "node"];
 export const SITE_URL = process.env.NOTIS_SITE_URL || "https://notis.gavinwye.com";
 const IMPORT = 'import { createHandler } from "./core.mjs";';
+const DASHBOARD_IMPORT = 'import { dashboardHtml } from "./dashboard.mjs";';
 
 /** The version the widget reports as NotisVersion, read from its source. */
 export function widgetVersion(source) {
@@ -32,12 +33,17 @@ export const sri = (bytes) => "sha384-" + createHash("sha384").update(bytes).dig
 
 /** One self-contained file per host: the adapter with the core inlined. */
 export async function serverSources(root = ROOT) {
-  const core = (await readFile(join(root, "server", "core.mjs"), "utf8")).replace(/^export /gm, "");
+  // The dashboard page goes in ahead of the core, which imports it.
+  const dashboard = (await readFile(join(root, "server", "dashboard.mjs"), "utf8")).replace(/^export /gm, "");
+  const coreSource = await readFile(join(root, "server", "core.mjs"), "utf8");
+  if (!coreSource.includes(DASHBOARD_IMPORT)) throw new Error("core.mjs has no dashboard import to replace");
+  const core = coreSource.replace(DASHBOARD_IMPORT, () => `// ---- Notis dashboard page (from server/dashboard.mjs) ----\n${dashboard}\n// ---- end of dashboard page ----`).replace(/^export /gm, "");
   const out = {};
   for (const host of HOSTS) {
     const src = await readFile(join(root, "server", `${host}.mjs`), "utf8");
     if (!src.includes(IMPORT)) throw new Error(`${host}.mjs has no core import to replace`);
-    out[host] = src.replace(IMPORT, `// ---- Notis core (from server/core.mjs) ----\n${core}\n// ---- end of core ----`);
+    // A function, not a string: the page contains "$&", which replace() would expand in a string.
+    out[host] = src.replace(IMPORT, () => `// ---- Notis core (from server/core.mjs) ----\n${core}\n// ---- end of core ----`);
   }
   return out;
 }

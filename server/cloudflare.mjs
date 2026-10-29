@@ -4,6 +4,7 @@
 //   binding COMMENTS            a KV namespace
 //   COMMENTS_ADMIN_TOKEN        guards DELETE (a secret)
 //   COMMENTS_ALLOWED_ORIGINS    comma-separated origins (default: any)
+//   COMMENTS_DASHBOARD          "public" lets anyone read the dashboard summary (default: admin token only)
 //
 // Serve it on the same hostname as the site, for example the route
 // example.com/api/comments*, so the widget's default "/api" works.
@@ -52,6 +53,7 @@ export default {
         maxThreadsPerPage: env.COMMENTS_MAX_THREADS_PER_PAGE,
         maxRepliesPerThread: env.COMMENTS_MAX_REPLIES_PER_THREAD,
         duplicateWindowMs: env.COMMENTS_DUPLICATE_WINDOW_MS,
+        dashboard: env.COMMENTS_DASHBOARD,
         basePath: "/api/comments",
       },
     });

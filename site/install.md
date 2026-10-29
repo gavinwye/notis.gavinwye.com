@@ -163,6 +163,7 @@ If it's on a different address from the site, set `apiBase` to the full address 
 | `COMMENTS_MAX_THREADS_PER_PAGE` | `500` | Refuse new notes after a page reaches this many. |
 | `COMMENTS_MAX_REPLIES_PER_THREAD` | `1000` | Refuse new replies after a note reaches this many. |
 | `COMMENTS_DUPLICATE_WINDOW_MS` | `60000` | Reject a repeat of the same note or reply (same author, same words or image spot, same text) within this many milliseconds. `0` turns the check off. |
+| `COMMENTS_DASHBOARD` | unset | Optional. `public` lets anyone read the notes dashboard at `/api/comments/dashboard` (page list and counts). Unset, the dashboard asks for the admin token. Only set it if the notes are not private. |
 | `COMMENTS_STORE` | `comments` | Netlify only. A different store name for each site. |
 | `COMMENTS_DIR` | `./comments-data` | Node only. The folder the notes are kept in. |
 | `PORT` | `8787` | Node only. |
@@ -200,6 +201,7 @@ Set before the script, or as `data-*` attributes on the tag:
 | `pins` | `true` | Allow pins on images. |
 | `noun` | `"note"` | What things left on the page are called on screen. Set `"comment"` for Comments and Add a comment. |
 | `activation` | unset | Optional reviewer gate: `{ query: "notis", hosts: ["*.netlify.app"] }`. A matching host or `?notis=1` enables it and remembers the choice; `?notis=0` disables it. |
+| `dashboard` | `false` | Add an "All pages" link in the panel to the notes dashboard at `{apiBase}/comments/dashboard`. |
 
 For a review tool that stays hidden from ordinary visitors, set `activation`. Use the host pattern for deploy previews, the query flag for selected reviewers, or both. Explain that this hides the widget but is not authentication; protect the page and API separately when notes are private.
 

@@ -8,12 +8,15 @@
 //   COMMENTS_DIR              where threads are stored   (default ./comments-data)
 //   COMMENTS_ADMIN_TOKEN      guards DELETE
 //   COMMENTS_ALLOWED_ORIGINS  comma-separated origins    (default: any)
+//   COMMENTS_DASHBOARD        "public" lets anyone read the dashboard summary (default: admin token only)
 import { createServer } from "node:http";
-import { randomUUID } from "node:crypto";
+import { randomUUID, webcrypto } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHandler } from "./core.mjs";
+
+globalThis.crypto ??= webcrypto; // Node 18 has no global crypto; the dashboard needs it for its nonce
 
 export function fileStorage(dir) {
   const file = (id) => join(dir, id + ".json");
@@ -46,7 +49,7 @@ export function fileStorage(dir) {
   };
 }
 
-export function createNodeServer({ dir, adminToken, allowedOrigins, basePath } = {}) {
+export function createNodeServer({ dir, adminToken, allowedOrigins, basePath, dashboard } = {}) {
   const handle = createHandler({
     storage: fileStorage(dir || process.env.COMMENTS_DIR || "./comments-data"),
     config: {
@@ -55,6 +58,7 @@ export function createNodeServer({ dir, adminToken, allowedOrigins, basePath } =
       maxThreadsPerPage: process.env.COMMENTS_MAX_THREADS_PER_PAGE,
       maxRepliesPerThread: process.env.COMMENTS_MAX_REPLIES_PER_THREAD,
       duplicateWindowMs: process.env.COMMENTS_DUPLICATE_WINDOW_MS,
+        dashboard: dashboard ?? process.env.COMMENTS_DASHBOARD,
       basePath: basePath || "/api/comments",
     },
   });
