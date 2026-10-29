@@ -2,7 +2,9 @@
 
 Issue: [Comment dashboard](https://github.com/gavinwye/notis.gavinwye.com/issues/94)
 
-Mockup: https://claude.ai/artifact/WPjjBBfdHAExJYsMegarF3 (private until shared)
+Mockup: https://claude.ai/artifact/WPjjBBfdHAExJYsMegarF3 (private until shared). The chosen design is "V4 Notis style".
+
+Build steps for Claude Code: [`94-dashboard-build.md`](94-dashboard-build.md).
 
 ## The problem
 
@@ -49,7 +51,7 @@ Existing notes get no link until someone leaves a new note on that page. That is
 
 1. Add `title` and `url` to thread creation. Clip them like the other fields (`title` 200, `url` 500). Accept `url` only if it starts with `/` or `http`.
 2. Add `GET {base}?summary=1`. It returns one row per page: `pageId`, `title`, `url`, `open`, `resolved`, `latest`. No note text. Allowed with the admin token, or for anyone when `COMMENTS_DASHBOARD=public`.
-3. Add `GET {base}/dashboard`. It returns the HTML page, under the same rule.
+3. Add `GET {base}/dashboard`. It returns the HTML page. The page holds no data, so it is always served. The summary and note calls it makes are what the setting gates. With no public setting, the page asks for the admin token.
 4. Notes on a page load through the existing `?page=` call, only when a row is expanded.
 5. Add `COMMENTS_DASHBOARD` to the Netlify, Cloudflare, Vercel and Node adapters.
 
@@ -89,7 +91,7 @@ Add to `test/core.test.mjs`:
 - Summary is refused without a token, allowed with one, allowed for anyone when public.
 - Summary counts open and resolved correctly across pages and returns no note text.
 - `title` and `url` are clipped and a `javascript:` URL is dropped.
-- Dashboard route follows the same rule as the summary.
+- The dashboard route is served without a token, and sends a content security policy.
 
 Add one build test that the dashboard HTML is present in each built server file. Run the adapter tests for all four hosts.
 

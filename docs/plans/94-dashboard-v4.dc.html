@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Notes dashboard, Notis style</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<style>
+:root{--ink:#0b0c0c;--muted:#4b5559;--line:#d8dde0;--paper:#fff;--tint:#f6f7f8;--mark:#fff3c4;--markline:#ffc726;--link:#1d5fa3}
+@media (prefers-color-scheme: dark){:root{--ink:#f1f3f4;--muted:#aab3b7;--line:#2f373b;--paper:#111517;--tint:#181d20;--mark:#4a3d0c;--link:#7db4ec}}
+body{margin:0;font-family:'Barlow','Barlow Fallback',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.55;font-size:19px}
+a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--markline);text-decoration-thickness:2px;text-underline-offset:3px}
+a:hover{background:var(--mark)}
+button{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 900px; background: var(--paper); color: var(--ink)">
+
+<header style="background: var(--paper); padding: 16px 0; border-bottom: 1px solid var(--line)">
+<div style="max-width: 920px; margin: 0 auto; padding: 0 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px">
+<a href="#" style="font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 24px; letter-spacing: -.01em; text-decoration: none; display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; background: #ffc726; display: inline-block"></span>Notis</a>
+<nav style="display: flex; flex-wrap: wrap; gap: 4px 16px">
+<a href="#" style="font-size: 17px; font-weight: 600">All notes</a>
+<a href="#" style="font-size: 17px; font-weight: 600">Settings</a>
+</nav>
+</div>
+</header>
+
+<main style="max-width: 920px; box-sizing: border-box; margin: 0 auto; padding: 0 20px 80px">
+
+<div style="padding: 56px 0 32px">
+<h1 style="margin: 0 0 20px; font-family: 'Barlow Semi Condensed', sans-serif; font-size: clamp(36px, 6vw, 56px); line-height: 1.18; font-weight: 700; isolation: isolate; text-wrap: balance">Every note, <mark style="position: relative; z-index: -1; background: var(--mark); color: inherit; border-bottom: 3px solid #ffc726; padding: 0 .08em">on every page</mark>.</h1>
+<p style="margin: 0; font-size: 22px; color: var(--muted); max-width: 34em">See where people have left notes on your site and go straight to them.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 36px">
+<div style="background: var(--tint); border: 1px solid var(--line); padding: 16px 18px"><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 34px; line-height: 1.1">{{totalOpen}}</div><div style="font-size: 17px; color: var(--muted)">Open notes</div></div>
+<div style="background: var(--tint); border: 1px solid var(--line); padding: 16px 18px"><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 34px; line-height: 1.1">{{totalPages}}</div><div style="font-size: 17px; color: var(--muted)">Pages with notes</div></div>
+<div style="background: var(--tint); border: 1px solid var(--line); padding: 16px 18px"><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 34px; line-height: 1.1">{{totalResolved}}</div><div style="font-size: 17px; color: var(--muted)">Resolved</div></div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding-bottom: 20px">
+<div role="group" aria-label="Show" style="display: flex; gap: 20px">
+<button type="button" onClick="{{showOpen}}" style="{{openTabStyle}}">Open</button>
+<button type="button" onClick="{{showAll}}" style="{{allTabStyle}}">All</button>
+<button type="button" onClick="{{showResolved}}" style="{{resolvedTabStyle}}">Resolved</button>
+</div>
+<label style="flex: 1 1 240px; display: flex">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search notes</span>
+<input type="search" placeholder="Search notes, names or pages" style="flex: 1; min-height: 44px; box-sizing: border-box; padding: 0 12px; font: 400 18px 'Barlow', sans-serif; border: 1px solid var(--line); border-radius: 0; background: var(--paper); color: var(--ink)">
+</label>
+<button type="button" style="font: 600 17px 'Barlow', sans-serif; background: #ffc726; color: #0b0c0c; border: 2px solid #0b0c0c; border-radius: 0; padding: 8px 14px; min-height: 44px; cursor: pointer">Export as Markdown</button>
+</div>
+
+<sc-for list="{{sections}}" as="section" hint-placeholder-count="3">
+<section style="padding: 28px 0 8px; border-top: 1px solid var(--line)">
+<div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px">
+<h2 style="margin: 0; font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 30px; line-height: 1.1; letter-spacing: -.01em">{{section.name}}</h2>
+<span style="font-size: 17px; color: var(--muted)">{{section.countLabel}}</span>
+</div>
+<sc-for list="{{section.pages}}" as="page" hint-placeholder-count="2">
+<div style="border-bottom: 1px solid var(--line)">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 0">
+<span style="{{page.badgeStyle}}">{{page.openCount}}</span>
+<button type="button" onClick="{{page.toggle}}" aria-expanded="{{page.expanded}}" style="flex: 1 1 260px; display: flex; flex-direction: column; align-items: flex-start; min-height: 44px; padding: 0; background: none; border: 0; text-align: left; cursor: pointer; color: var(--ink); font-size: 19px">
+<span style="font-weight: 600">{{page.name}}</span><span style="font-size: 16px; color: var(--muted)">{{page.path}} · {{page.summary}}</span>
+</button>
+<a href="#" style="font-size: 17px; font-weight: 600" aria-label="Open {{page.name}} with the panel">Open page</a>
+<button type="button" onClick="{{page.toggle}}" style="font: 600 17px 'Barlow', sans-serif; padding: 0; background: none; border: 0; color: var(--ink); cursor: pointer; text-decoration: underline; text-decoration-color: #ffc726; text-decoration-thickness: 2px; text-underline-offset: 3px">{{page.toggleLabel}}</button>
+</div>
+<sc-if value="{{page.expanded}}" hint-placeholder-val="{{ false }}">
+<ul style="list-style: none; margin: 0; padding: 4px 0 16px; display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-bottom: 0; margin-bottom: 16px">
+<sc-for list="{{page.notes}}" as="note" hint-placeholder-count="2">
+<li style="padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 16px; color: var(--muted); border-left: 2px solid #ffc726; padding-left: 10px">{{note.target}}</div>
+<div style="font-size: 14px; color: var(--muted)">{{note.meta}}</div>
+<div style="font-size: 19px">{{note.text}}</div>
+<div style="display: flex; gap: 16px; padding-top: 4px; font-size: 15px; font-weight: 600">
+<a href="#">Go to note</a><a href="#">Reply</a><a href="#">{{note.action}}</a>
+</div>
+</li>
+</sc-for>
+</ul>
+</sc-if>
+</div>
+</sc-for>
+</section>
+</sc-for>
+
+<p style="margin: 32px 0 0; font-size: 15px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 20px">Notes load from your own server. Only people with the admin token can see this page.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'open', openPages: { national: true } };
+  }
+  renderVals() {
+    const filter = this.state.filter;
+    const data = [
+      { name: 'About', pages: [
+        { id: 'national', name: 'National', path: '/about/national', notes: [
+          { target: '“a service used by 100,000 people”', text: 'Can we link to the source for this figure?', meta: 'Priya · 3 days ago · 1 reply', resolved: false },
+          { target: 'General', text: 'The page feels long. Could the history move to its own page?', meta: 'Tom · 5 days ago', resolved: false },
+          { target: 'Image: team photo', text: 'Alt text is missing.', meta: 'Priya · 2 weeks ago', resolved: true }
+        ]},
+        { id: 'regional', name: 'Regional teams', path: '/about/regional', notes: [
+          { target: '“contact your local office”', text: 'This link goes to the old directory.', meta: 'Sam · yesterday', resolved: false },
+          { target: '“opening hours”', text: 'Hours differ from the contact page.', meta: 'Sam · yesterday · 2 replies', resolved: false }
+        ]},
+        { id: 'history', name: 'Our history', path: '/about/history', notes: [
+          { target: '“founded in 1987”', text: 'Check the year with the archive team.', meta: 'Tom · 1 week ago', resolved: true }
+        ]}
+      ]},
+      { name: 'Services', pages: [
+        { id: 'apply', name: 'Apply online', path: '/services/apply', notes: [
+          { target: '“Start now” button', text: 'Button label does not match the next page title.', meta: 'Priya · today', resolved: false },
+          { target: '“you will need”', text: 'Add the list of documents here, not on the next page.', meta: 'Amira · today · 1 reply', resolved: false },
+          { target: 'Image: process diagram', text: 'Pin sits on step 3, which has changed.', meta: 'Amira · 4 days ago', resolved: false }
+        ]}
+      ]},
+      { name: 'Contact', pages: [
+        { id: 'contact', name: 'Contact us', path: '/contact', notes: [
+          { target: 'General', text: 'Phone number needs a calling hours line.', meta: 'Sam · 6 days ago', resolved: true }
+        ]}
+      ]}
+    ];
+    const keep = (n) => filter === 'all' || (filter === 'open' ? !n.resolved : n.resolved);
+    let totalOpen = 0, totalResolved = 0, totalPages = 0;
+    data.forEach((s) => s.pages.forEach((p) => {
+      totalPages += 1;
+      p.notes.forEach((n) => { if (n.resolved) totalResolved += 1; else totalOpen += 1; });
+    }));
+    const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+    const sections = data.map((s) => {
+      const pages = s.pages.map((p) => {
+        const open = p.notes.filter((n) => !n.resolved).length;
+        const done = p.notes.length - open;
+        const expanded = !!this.state.openPages[p.id];
+        return {
+          name: p.name, path: p.path,
+          summary: open + ' open, ' + done + ' resolved',
+          openCount: open,
+          badgeStyle: 'flex: none; width: 30px; height: 30px; display: grid; place-items: center; font-weight: 600; font-size: 16px; ' + (open ? 'background: var(--ink); color: var(--paper)' : 'border: 1px solid var(--line); color: var(--muted)'),
+          expanded,
+          toggleLabel: expanded ? 'Hide notes' : 'Show notes',
+          toggle: () => this.setState({ openPages: { ...this.state.openPages, [p.id]: !this.state.openPages[p.id] } }),
+          notes: p.notes.filter(keep).map((n) => ({ ...n, action: n.resolved ? 'Reopen' : 'Resolve' }))
+        };
+      }).filter((p) => p.notes.length);
+      const count = pages.reduce((a, p) => a + p.notes.length, 0);
+      return { name: s.name, countLabel: plural(count, 'note'), pages };
+    }).filter((s) => s.pages.length);
+    const tab = (on) => 'font: 600 18px Barlow, sans-serif; padding: 4px 0; background: none; border: 0; cursor: pointer; color: var(--ink); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; text-decoration-color: ' + (on ? '#ffc726' : 'transparent') + (on ? '' : '; color: var(--muted)');
+    return {
+      totalOpen, totalResolved, totalPages, sections,
+      showOpen: () => this.setState({ filter: 'open' }),
+      showAll: () => this.setState({ filter: 'all' }),
+      showResolved: () => this.setState({ filter: 'resolved' }),
+      openTabStyle: tab(filter === 'open'),
+      allTabStyle: tab(filter === 'all'),
+      resolvedTabStyle: tab(filter === 'resolved')
+    };
+  }
+}
+</script>
+</body>
+</html>
