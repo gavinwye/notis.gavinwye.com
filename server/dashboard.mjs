@@ -47,12 +47,13 @@ h1 mark{position:relative;z-index:-1;background:var(--mark);color:inherit;border
 .tabs{display:flex;gap:20px}
 .tab{background:none;border:0;padding:0;min-height:44px;font-size:18px;font-weight:600;color:var(--muted);cursor:pointer}
 .tab[aria-pressed="true"]{color:var(--ink);text-decoration:underline;text-decoration-color:var(--markline);text-decoration-thickness:2px;text-underline-offset:6px}
-.search{flex:1 1 240px;display:flex}
-.search input{flex:1;min-height:44px;padding:0 12px;font-size:18px;border:1px solid var(--line);border-radius:0;background:var(--paper)}
+.search{flex:1 1 240px;display:flex;gap:8px}
+.search .grow{flex:1;display:flex;min-width:0}
+.search input{flex:1;min-width:0;min-height:44px;padding:0 12px;font-size:18px;border:1px solid var(--line);border-radius:0;background:var(--paper)}
 .btn{font-weight:600;font-size:17px;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;border-radius:0;padding:8px 14px;min-height:44px;cursor:pointer}
 .btn[disabled]{opacity:.6;cursor:default}
 .note-status{min-height:1.55em;margin:0 0 12px;font-size:16px;color:var(--muted)}
-section.group{padding:28px 0 8px;border-top:2px solid var(--ink)}
+section.group{margin-top:14px;padding:14px 0 8px;border-top:2px solid var(--ink)}
 section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.01em}
 .grouphead{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
 .count{font-size:17px;color:var(--muted)}
@@ -89,7 +90,7 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
 .foot{margin:32px 0 0;font-size:15px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px}
 .foot p{margin:0 0 8px}
 .foot .linkbtn{font-size:17px;min-height:44px}
-@media (max-width:560px){.hero{padding:32px 0 24px}.lede{font-size:19px}.tabs{width:100%}.btn{width:100%}}
+@media (max-width:560px){.hero{padding:32px 0 24px}.lede{font-size:19px}.tabs{width:100%}}
 @media (prefers-reduced-motion:no-preference){a,.linkbtn{transition:background-color .1s}}
 </style>
 </head>
@@ -121,7 +122,7 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
 <button class="tab" type="button" data-filter="all" aria-pressed="false">All</button>
 <button class="tab" type="button" data-filter="resolved" aria-pressed="false">Resolved</button>
 </div>
-<label class="search"><span class="vh">Search notes, names or pages</span><input type="search" id="q" placeholder="Search notes, names or pages" autocomplete="off"></label>
+<form class="search" id="searchform" role="search"><label class="grow"><span class="vh">Search notes, names or pages</span><input type="search" id="q" placeholder="Search notes, names or pages" autocomplete="off"></label><button class="btn" type="submit">Search</button></form>
 </div>
 <p class="note-status" id="progress"></p>
 <div id="list"></div>
@@ -536,15 +537,14 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
       render();
     });
   });
-  var timer;
-  $("q").addEventListener("input", function () {
-    clearTimeout(timer);
-    timer = setTimeout(function () {
-      state.query = $("q").value.trim().toLowerCase();
-      if (state.query) loadAll();
-      render();
-    }, 200);
-  });
+  // Searching happens when the Search button (or Enter) is used. Emptying the box shows everything again.
+  function search() {
+    state.query = $("q").value.trim().toLowerCase();
+    if (state.query) loadAll();
+    render();
+  }
+  $("searchform").addEventListener("submit", function (e) { e.preventDefault(); search(); });
+  $("q").addEventListener("input", function () { if (!$("q").value.trim() && state.query) search(); });
   $("export").addEventListener("click", exportMd);
   load();
 })();
