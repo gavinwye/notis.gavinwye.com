@@ -68,6 +68,7 @@ export default function vercelHandler(request) {
       maxThreadsPerPage: process.env.COMMENTS_MAX_THREADS_PER_PAGE,
       maxRepliesPerThread: process.env.COMMENTS_MAX_REPLIES_PER_THREAD,
       duplicateWindowMs: process.env.COMMENTS_DUPLICATE_WINDOW_MS,
+      dashboard: process.env.COMMENTS_DASHBOARD,
       basePath: "/api/comments",
     },
   });

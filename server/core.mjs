@@ -4,7 +4,9 @@
 // adapter that supplies `storage` and the settings.
 //
 //   GET    {base}?page=<pageId>      -> [thread, ...]   (all threads if no page)
-//   POST   {base}                    body:{pageId,quote,prefix,suffix,author,text[,pin]} -> thread
+//   GET    {base}?summary=1          -> [{pageId,title,url,open,resolved,latest,openAt}, ...]  (no note text)
+//   GET    {base}/dashboard          -> the notes dashboard (an HTML page; the data calls are gated)
+//   POST   {base}                    body:{pageId[,title,url],quote,prefix,suffix,author,text[,pin]} -> thread
 //   POST   {base}/:id/replies        body:{author,text} -> reply
 //   PATCH  {base}/:id                body:{resolved} -> thread
 //   DELETE {base}/:id                moderation: remove one   (admin token)
@@ -17,15 +19,37 @@
 //   remove(id): Promise<boolean>     true if it existed
 //   clear():  Promise<void>
 // }
-// config: { adminToken, allowedOrigins: string[], basePath: "/api/comments" }
+// config: { adminToken, allowedOrigins: string[], basePath: "/api/comments", dashboard: "public" | "" }
+//   dashboard "public" lets anyone read the per-page summary; otherwise it needs the admin token.
+import { dashboardHtml } from "./dashboard.mjs";
 
 // Field size caps keep stored data and rendering bounded.
-const LIMITS = { src: 500, alt: 200, pageId: 200, quote: 800, prefix: 200, suffix: 200, author: 80, text: 4000, replies: 1000 };
+const LIMITS = { src: 500, alt: 200, pageId: 200, title: 200, url: 500, quote: 800, prefix: 200, suffix: 200, author: 80, text: 4000, replies: 1000 };
 const MAX_BODY = 64 * 1024; // bytes, checked before JSON.parse
 const ID = /^[a-z0-9]{6,40}$/;
 
 const clip = (v, max) => (v == null ? "" : String(v)).slice(0, max);
+// Keep a page address only if it is a path on the same site or a web address. Anything else
+// (javascript:, data:, a protocol-relative //host) is dropped, because the dashboard links to it.
+const safeUrl = (v) => {
+  const u = clip(v, LIMITS.url).trim();
+  return /^(\/(?![\/\\])|https?:\/\/)/i.test(u) ? u : "";
+};
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+// One row per page: counts and the newest title and address, never any note text.
+function summarise(threads) {
+  const pages = new Map();
+  for (const t of [...threads].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))) {
+    const row = pages.get(t.pageId) || { pageId: t.pageId, title: "", url: "", open: 0, resolved: 0, latest: 0, openAt: [] };
+    if (t.resolved) row.resolved += 1; else { row.open += 1; row.openAt.push(Number(t.createdAt) || 0); }
+    if (t.title) row.title = t.title;
+    if (t.url) row.url = t.url;
+    row.latest = Math.max(row.latest, Number(t.createdAt) || 0, ...(t.replies || []).map((r) => Number(r.createdAt) || 0));
+    pages.set(t.pageId, row);
+  }
+  return [...pages.values()].sort((a, b) => b.latest - a.latest);
+}
 
 export function createHandler({ storage, config = {} }) {
   const adminToken = config.adminToken || "";
@@ -39,6 +63,7 @@ export function createHandler({ storage, config = {} }) {
   const maxRepliesPerThread = positiveInt(config.maxRepliesPerThread, LIMITS.replies);
   // 0 turns the duplicate check off; anything else that isn't a positive whole number keeps the default.
   const duplicateWindowMs = String(config.duplicateWindowMs).trim() === "0" ? 0 : positiveInt(config.duplicateWindowMs, 60_000);
+  const publicDashboard = String(config.dashboard || "").trim().toLowerCase() === "public";
   const threadWrites = new Map();
 
   // Serialize read-modify-write operations for each thread. Without this,
@@ -100,12 +125,32 @@ export function createHandler({ storage, config = {} }) {
     } catch {
       return json({ error: "invalid path encoding" }, 400);
     }
+    // The page holds no data, so it is always served. "dashboard" matches the id pattern, so
+    // it is caught before the id check; real ids come from newId() and cannot be this word.
+    if (req.method === "GET" && seg.length === 1 && seg[0] === "dashboard") {
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      const nonce = btoa(String.fromCharCode(...bytes));
+      return new Response(dashboardHtml(nonce), {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+          "Content-Security-Policy": `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "no-referrer",
+        },
+      });
+    }
     if (seg[0] !== undefined && !ID.test(seg[0])) return json({ error: "thread not found" }, 404);
 
     try {
       // ---- GET ?page= ----
       if (req.method === "GET" && seg.length === 0) {
         const page = url.searchParams.get("page");
+        if (!page && url.searchParams.get("summary") === "1") {
+          if (!isAdmin(req) && !publicDashboard) return json({ error: "admin token required" }, 403);
+          return json(summarise(await storage.list()));
+        }
         if (!page && !isAdmin(req)) return json({ error: "admin token required to list all pages" }, 403);
         const all = await storage.list();
         const out = (page ? all.filter((t) => t.pageId === page) : all)
@@ -119,6 +164,8 @@ export function createHandler({ storage, config = {} }) {
         if (!parsed.ok) return badBody(parsed);
         const b = parsed.value || {};
         const pageId = clip(b.pageId, LIMITS.pageId).trim();
+        const title = clip(b.title, LIMITS.title).trim();
+        const pageUrl = safeUrl(b.url);
         const text = clip(b.text, LIMITS.text).trim();
         if (!pageId) return json({ error: "pageId is required" }, 400);
         if (!text) return json({ error: "text is required" }, 400);
@@ -148,7 +195,7 @@ export function createHandler({ storage, config = {} }) {
           if (duplicate) return json({ error: "duplicate comment" }, 409);
 
           const thread = {
-            id: newId(), pageId,
+            id: newId(), pageId, title, url: pageUrl,
             quote: clip(b.quote, LIMITS.quote),
             prefix: clip(b.prefix, LIMITS.prefix),
             suffix: clip(b.suffix, LIMITS.suffix),

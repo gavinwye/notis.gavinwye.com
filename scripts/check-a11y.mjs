@@ -352,7 +352,7 @@ section("Wording: the default is note, and noun: \"comment\" gives the old words
 {
   const page = await open();
   const t = await page.evaluate(() => ({ toggle: document.querySelector(".cmt-toggle").textContent, title: document.querySelector("#cmt-title").textContent, sel: document.querySelector(".cmt-selpanel").textContent, list: document.querySelector(".cmt-list").getAttribute("aria-label"), close: document.querySelector(".cmt-close").getAttribute("aria-label") }));
-  ok(t.toggle === "Notes" && t.title === "Notes", "default: the button and panel say Notes", JSON.stringify(t));
+  ok(t.toggle === "Notis" && t.title === "Notis", "default: the button and panel say Notis", JSON.stringify(t));
   ok(t.sel === "Add note on selection" && t.list === "Notes on this page" && t.close === "Close notes", "default: panel actions and labels say note", JSON.stringify(t));
   await page.context().close();
 

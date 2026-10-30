@@ -116,6 +116,7 @@ Set them with a global before the script, or with `data-*` attributes on the tag
 | `noun` | `"note"` | What things left on the page are called on screen: Notes, Add a note, and so on. Set `"comment"` to get Comments and Add a comment. |
 | `dock` | `false` | Push the page over to make room for the panel, rather than covering it. |
 | `activation` | `null` | Optional reviewer gate: `{ query: "notis", hosts: ["*.netlify.app"] }`. A matching host or `?notis=1` enables Notis and remembers it; `?notis=0` disables it again. |
+| `dashboard` | `false` | Add an "All notes" link in the panel header, to the [notes dashboard](#notes-dashboard). Needs the API; not shown with `apiBase: null`. |
 
 To keep Notis hidden on an ordinary production page but available to reviewers:
 
@@ -158,6 +159,22 @@ The widget fires events on `document`, so a page can react to a note, for exampl
 | `comments:created` | `{ thread }` | a comment was posted |
 | `comments:replied` | `{ id }` | a reply was posted |
 | `comments:resolved` | `{ id, resolved }` | a thread was resolved or reopened |
+
+## Notes dashboard
+
+Every note, on every page, in one place. The API serves a page at `/api/comments/dashboard` that lists every page with notes, how many are open and resolved, and a link straight to each note. You can resolve, reply and export from it.
+
+![The notes dashboard: totals, filters, and pages grouped by section with their notes](docs/images/dashboard.png)
+
+- **Who can see it.** By default only someone with the admin token (`COMMENTS_ADMIN_TOKEN`). The page asks for it, keeps it in that browser tab only, and sends it only to your own server. Set `COMMENTS_DASHBOARD=public` to let anyone with the link read the page list and counts. Note text is still only fetched one page at a time, as the widget does. **Public means anyone can learn which pages have notes and what those notes say**, so leave it off unless the notes are not private.
+- **Nothing to install.** The page comes from the same server file as the API, on all four hosts. It makes no requests to anyone else, and has no tracking.
+- **Page titles and links.** The widget now sends each page's title and address with a new note. Notes left before this have neither. If the page id is the path (the default) they still get an "Open page" link and sit under their path; a custom page id such as `homepage` has no address, so it sits under "Other" with no link until someone leaves a new note on that page.
+- **Go to note** opens the page with `?notis=1` (which turns on a site that uses [reviewer activation](#options)) and `#notis-<id>`, which opens the panel on that note.
+- **New notes.** Each page shows how many open notes were left since you last opened it in this browser. This is remembered in the browser only, not on the server.
+- **Export as Markdown**, a link at the bottom of the page, copies the notes you are looking at (Open, All or Resolved) as Markdown, one heading per page.
+- The page summary reads every note. That is fine for hundreds; with thousands, expect it to take a moment.
+
+Turn on the link in the panel with `data-dashboard="true"` or `dashboard: true` in `COMMENTS_CONFIG`.
 
 ## Keeping it up to date
 
@@ -231,6 +248,7 @@ If it's on a different address from your site, give the widget the full URL (`ap
 | `COMMENTS_MAX_THREADS_PER_PAGE` | `500` | Refuse new threads after a page reaches this ceiling. |
 | `COMMENTS_MAX_REPLIES_PER_THREAD` | `1000` | Refuse new replies after a thread reaches this ceiling. |
 | `COMMENTS_DUPLICATE_WINDOW_MS` | `60000` | Reject a repeat of the same note (same author, same words or image spot, same text) or the same reply within this window. `0` turns the check off. |
+| `COMMENTS_DASHBOARD` | unset | Set `public` to let anyone read the [notes dashboard](#notes-dashboard) page list and counts. Unset, it needs the admin token. |
 | `COMMENTS_STORE` | `comments` | Netlify only: the blob store name. Use a different one for each site. |
 | `COMMENTS_DIR` | `./comments-data` | Node only: where the files go. |
 | `PORT` | `8787` | Node only. |
@@ -243,7 +261,7 @@ The built-in ceilings limit accidental floods, but public anonymous comments sti
 
 On your own host, in your own account. On Netlify that's a [Netlify Blobs](https://docs.netlify.com/blobs/overview/) store (named `comments`, or whatever `COMMENTS_STORE` says), one blob per thread under `t/<id>`. On Cloudflare it's your KV namespace, on Vercel it's a private Blob store, and on Node it's a folder of JSON files. Nobody else holds a copy: there is no central Notis service, and the Notis site never sees your comments.
 
-Each thread stores the page identifier, selected words and nearby context, the name the reviewer typed, note and reply text, timestamps, resolved state and—when used—an image URL and pin coordinates. Notis does not collect email addresses, accounts or analytics. The site owner is responsible for telling reviewers how this data is used and how long it is kept.
+Each thread stores the page identifier, the page's title and address, selected words and nearby context, the name the reviewer typed, note and reply text, timestamps, resolved state and—when used—an image URL and pin coordinates. Notis does not collect email addresses, accounts or analytics. The site owner is responsible for telling reviewers how this data is used and how long it is kept.
 
 - **One store for the whole site.** Production and deploy previews share it. A comment left on a preview also shows on any page with the same `pageId` in production. Use a different `COMMENTS_STORE` per site, and give previews their own `pageId` if you don't want that.
 - **Export or back up:** `curl -H "Authorization: Bearer $COMMENTS_ADMIN_TOKEN" https://your-site/api/comments > comments-backup.json` works on any host. On Netlify you can also use `netlify blobs:list comments`.
@@ -289,7 +307,9 @@ Open an issue on GitHub: [report a bug](https://github.com/gavinwye/notis.gavinw
 |---|---|---|
 | `GET /api/comments?page=<pageId>` | | `[thread, ...]` for one page |
 | `GET /api/comments` | | every thread (admin token required) |
-| `POST /api/comments` | `{ pageId, quote, prefix, suffix, author, text, pin? }` | the new thread |
+| `GET /api/comments?summary=1` | | `[{ pageId, title, url, open, resolved, latest, openAt }, ...]`, one row per page (`openAt` is when each open note was left), no note text (admin token, or anyone with `COMMENTS_DASHBOARD=public`) |
+| `GET /api/comments/dashboard` | | the [notes dashboard](#notes-dashboard), an HTML page. Always served; the data calls it makes are the gated part |
+| `POST /api/comments` | `{ pageId, title?, url?, quote, prefix, suffix, author, text, pin? }` | the new thread. `url` is kept only if it starts with `/` (not `//`), `http://` or `https://` |
 | `POST /api/comments/:id/replies` | `{ author, text }` | the new reply |
 | `PATCH /api/comments/:id` | `{ resolved }` | the updated thread |
 | `DELETE /api/comments/:id` | | removes one thread (admin token) |
