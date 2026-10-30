@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir, cp, readdir, stat, rm } from "node:fs/promi
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { renderChangelogPage } from "./changelog.mjs";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const HOSTS = ["netlify", "cloudflare", "vercel", "node"];
@@ -123,6 +124,10 @@ export async function buildSite(site, root = ROOT) {
     servers: Object.fromEntries(HOSTS.map((h) => [h, `${SITE_URL}/${vdir}/server/${h}.mjs`])),
   };
   await writeFile(join(site, "version.json"), JSON.stringify(info, null, 2) + "\n");
+  // The changelog as a page on the site, so the footer can link to it. Skipped where there is no CHANGELOG.md.
+  if (await exists(join(root, "CHANGELOG.md"))) {
+    await writeFile(join(site, "changelog.html"), renderChangelogPage(await readFile(join(root, "CHANGELOG.md"), "utf8"), { version }));
+  }
   return info;
 }
 

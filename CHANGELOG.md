@@ -4,7 +4,11 @@ All notable changes to Notis. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
-**Widget: yes. Server: yes.**
+## [0.4.0] - 2026-10-30
+
+**In short:** adds a notes dashboard, one page that lists every page with notes, how many are open or resolved, and a link straight to each note. Notes now remember which page they were left on. Also new: notes that appear without reloading, general notes that aren't tied to any words, copying or downloading a page's notes, an optional reviewer-only mode, colour and font settings, and Vercel support. The button and panel now say Notis.
+
+**What to do:** replace both of your Notis files, the script on your pages (`comments.js`) and the server file. Your existing notes keep working. The dashboard is private by default and asks for your admin token; set `COMMENTS_DASHBOARD=public` only if you want anyone to be able to see it. If you used the old Supabase option, it has been removed.
 
 ### Changed
 - The Notes button and panel title now say Notis (a site that sets its own `noun` keeps its own word).
@@ -26,18 +30,18 @@ All notable changes to Notis. The format follows [Keep a Changelog](https://keep
 
 ## [0.3.2] - 2026-10-12
 
-**Widget: no** (only its version number changes). **Server: yes** (on every host; it removes a way to lose every note by mistake, so don't skip it).
+**In short:** fixes a way to delete every note by mistake. A delete request with the note's id missing is now refused instead of clearing everything.
 
-A one-line server fix. The widget is unchanged apart from its version number. Because the server files are part of a release, this is a new version: 0.3.1 is archived and doesn't change.
+**What to do:** replace the server file. Don't skip it. The script on your pages (`comments.js`) is unchanged apart from its version number.
 
 ### Fixed
 - **An empty id on DELETE no longer clears every note.** `DELETE /api/comments/` (a trailing slash with nothing after it, or an empty segment such as `/api/comments//`, which is what a script sends when its `$ID` is unset) used to be treated as "clear everything" when the admin token was valid. It is now refused with `400` ("a note id is required; to clear all notes use DELETE /api/comments") and nothing is touched. `DELETE /api/comments` with no trailing slash is still the only form that clears everything, and `DELETE /api/comments/<id>` still removes one note (one trailing slash after an id is accepted). ([#79](https://github.com/gavinwye/notis.gavinwye.com/issues/79))
 
 ## [0.3.1] - 2026-10-11
 
-**Widget: no** (only its version number changes). **Server: yes** (on every host; security fixes, so don't skip it).
+**In short:** security and reliability fixes for the server. Listing every page's notes now needs your admin token, there are limits on how many notes and replies a page can get, accidental double posts are caught, and two people replying at the same moment no longer lose a reply.
 
-Server fixes. The widget is unchanged apart from its version number. Because the server files are part of a release, this is a new version: 0.3.0 is archived and doesn't change.
+**What to do:** replace the server file. Don't skip it, because it contains security fixes. The script on your pages (`comments.js`) is unchanged apart from its version number.
 
 ### Security
 - **The full export needs the admin token.** `GET /api/comments` with no `?page=` returns every page's notes, so it now requires `Authorization: Bearer <COMMENTS_ADMIN_TOKEN>` and answers `403` without it. Reading one page with `?page=<pageId>` is unchanged, so the widget keeps working. ([#69](https://github.com/gavinwye/notis.gavinwye.com/pull/69))
@@ -55,9 +59,9 @@ Server fixes. The widget is unchanged apart from its version number. Because the
 
 ## [0.3.0] - 2026-10-11
 
-**Widget: yes. Server: no** (the server files are identical to 0.2.0).
+**In short:** makes Notis easier to use with a keyboard or a screen reader: select text and press Alt+Shift+C to leave a note, pin images from the keyboard, and hear announcements when things change. Focus, contrast and touch targets are clearer. What you see on screen now says Notes instead of Comments (a new `noun` option brings Comments back), and the text is set in Barlow.
 
-An accessibility pass, notes wording and Barlow type. Because the widget's source changed, this is a new version: 0.2.0 is archived and doesn't change.
+**What to do:** replace the script on your pages (`comments.js`). The server file is the same as in 0.2.0, so you can leave it.
 
 ### Added
 - **Keyboard route to commenting:** select text with Shift + arrow keys and press Alt+Shift+C, or use **Comment on selection** in the panel. Screen readers are told the shortcut when text is selected. ([#29](https://github.com/gavinwye/notis.gavinwye.com/issues/29))
@@ -81,7 +85,9 @@ An accessibility pass, notes wording and Barlow type. Because the widget's sourc
 
 ## [0.2.0] - 2026-10-11
 
-**Widget: yes. Server: yes** (the single-file servers for Netlify, Cloudflare and Node are new in this version, and notes are stored one per record).
+**In short:** Notis now works on phones and tablets, adds pins on images and a name field, and comes with ready-made servers for Netlify, Cloudflare and plain Node. Each note is stored on its own, so two people writing at once no longer overwrite each other. The project is renamed Notis.
+
+**What to do:** replace both of your files, the script on your pages (`comments.js`) and the server file. The Netlify server moves older notes across the first time it reads them, and nothing is deleted.
 
 ### Added
 - Phones and tablets: selecting text with a long-press now works. A "Comment on selection" bar sits at the bottom of the screen, and the comment box is a compact two-step sheet (name, then comment) that keeps your selected words highlighted above the keyboard. ([#47](https://github.com/gavinwye/notis.gavinwye.com/pull/47))
@@ -107,7 +113,9 @@ An accessibility pass, notes wording and Barlow type. Because the widget's sourc
 
 ## [0.1.0] - 2026-10-10
 
-First version in its own repository, taken from the copies in use on several sites.
+**In short:** the first version, taken from the copies already in use on several sites: select text, leave a note, reply, and resolve it.
+
+**What to do:** nothing. This was the first release.
 
 ### Added
 - Select text on a page and leave a comment. Threads with replies, resolve and reopen, and a toggle for resolved ones.
@@ -118,6 +126,7 @@ First version in its own repository, taken from the copies in use on several sit
 ### Changed
 - Removed project-specific names: neutral event, class and storage-key prefixes (`comments:*`, `cmt-*`), and the licence holder is Gavin Wye. ([#9](https://github.com/gavinwye/notis.gavinwye.com/pull/9))
 
+[0.4.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/gavinwye/notis.gavinwye.com/releases/tag/v0.3.2
 [0.3.1]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.2.0...v0.3.0

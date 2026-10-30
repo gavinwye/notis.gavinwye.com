@@ -11,6 +11,7 @@ site/server/
 dist/
 site/v[0-9]*/
 site/version.json
+site/changelog.html
 site/.stage-*
 .claude/worktrees/
 

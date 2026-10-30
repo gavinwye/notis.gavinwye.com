@@ -62,7 +62,7 @@ If the site's version equals `version`, say "Notis is up to date" and stop.
 
 Otherwise read https://raw.githubusercontent.com/gavinwye/notis.gavinwye.com/main/CHANGELOG.md. For each version after the one the site has, up to and including the current one, note:
 
-- the line **Widget: yes/no. Server: yes/no.** at the top of the entry, which says which of the user's files must be replaced;
+- the **What to do** line at the top of the entry, which says which of the user's files must be replaced: the script on their pages (`comments.js`), the server file, or both. The **In short** line above it says what changed, in plain English;
 - anything under *Security* (these must not be skipped), *Changed* or a note about settings, defaults or breaking behaviour.
 
 If the repository is private and the changelog can't be fetched, say so and carry on: replace both files anyway.
