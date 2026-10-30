@@ -583,7 +583,7 @@
       '@media (max-width:760px){html.cmt-docked body{margin-right:0}html.cmt-docked .cmt-panel{box-shadow:-2px 0 12px rgba(0,0,0,.15)}}' +
       '@media (prefers-reduced-motion:no-preference){body{transition:margin-right .2s}}' +
       '.cmt-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:2px solid #0b0c0c;background:#ffc726;color:#0b0c0c}' +
-      '.cmt-head h2{margin:0;font-size:18px;flex:1}.cmt-head button{background:none;border:0;color:#0b0c0c;font-size:20px;cursor:pointer;line-height:1}' +
+      '.cmt-head h2{margin:0;font-size:18px;flex:none}.cmt-titlewrap{flex:1;min-width:0;display:flex;align-items:center;gap:16px}.cmt-head button{background:none;border:0;color:#0b0c0c;font-size:20px;cursor:pointer;line-height:1}' +
       '.cmt-sub{display:flex;align-items:center;gap:6px;padding:6px 16px;font-size:14px;color:#505a5f;border-bottom:1px solid #e0e4e9}.cmt-sub input[type=checkbox]{width:24px;height:24px;margin:0 4px 0 0;flex:none}.cmt-sub label{display:flex;align-items:center;min-height:24px}' +
       '.cmt-list{flex:1;overflow:auto;padding:8px 0;margin:0;list-style:none}' +
       '.cmt-empty{padding:24px 16px;color:#505a5f;font-size:15px}' +
@@ -620,7 +620,7 @@
         '.cmt-panel{left:0;right:0;width:100%;max-width:100%;border-left:0;overflow-x:hidden;box-shadow:none;height:100vh;height:100dvh;overscroll-behavior:contain}' +
         '.cmt-panel *{min-width:0;box-sizing:border-box}' +
         '.cmt-head{padding:6px 8px 6px 16px;gap:8px}' +
-        '.cmt-head h2{flex:1;min-width:0}' +
+        '.cmt-head h2{min-width:0}' +
         '.cmt-head button{min-width:44px;min-height:44px}.cmt-head .cmt-close{width:44px;height:44px}.cmt-foot .cmt-footclose{min-height:44px}.cmt-foot{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}' +
         '.cmt-head .cmt-pinbtn{padding:0 12px;font-size:15px}.cmt-head .cmt-alllink{min-height:44px;font-size:15px}' +
         '.cmt-sub{padding:0 8px 0 16px;font-size:16px;min-height:44px}' +
@@ -698,12 +698,14 @@
     var xPath = document.createElementNS(svgNS, 'path');
     xPath.setAttribute('d', 'M5 5l14 14M19 5L5 19'); xPath.setAttribute('stroke', 'currentColor'); xPath.setAttribute('stroke-width', '3'); xPath.setAttribute('stroke-linecap', 'square'); xPath.setAttribute('fill', 'none');
     icon.appendChild(xPath); close.appendChild(icon);
-    close.addEventListener('click', closePanel); head.appendChild(h2);
+    close.addEventListener('click', closePanel);
+    var titleWrap = el('div', 'cmt-titlewrap'); titleWrap.appendChild(h2);
     if (COMMENTS_CONFIG.dashboard && COMMENTS_CONFIG.apiBase) {
       var allNotes = el('a', 'cmt-alllink', 'All ' + NOUNS);
       allNotes.href = COMMENTS_CONFIG.apiBase + '/comments/dashboard';
-      head.appendChild(allNotes);
+      titleWrap.appendChild(allNotes);
     }
+    head.appendChild(titleWrap);
     if (COMMENTS_CONFIG.pins) {
       pinBtn = el('button', 'cmt-pinbtn', 'Pin on image'); pinBtn.setAttribute('aria-pressed', 'false');
       pinBtn.addEventListener('click', function () { setPinMode(!pinMode); });
