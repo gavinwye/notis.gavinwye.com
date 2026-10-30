@@ -4,7 +4,9 @@ All notable changes to Notis. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
-**Widget: yes. Server: yes.**
+## [0.4.0] - 2026-10-30
+
+**Widget: yes. Server: yes.** Replace both files together: the dashboard, the page title and address on new notes, and the Vercel adapter need the new server, and the new widget sends the title and address.
 
 ### Changed
 - The Notes button and panel title now say Notis (a site that sets its own `noun` keeps its own word).
@@ -118,6 +120,7 @@ First version in its own repository, taken from the copies in use on several sit
 ### Changed
 - Removed project-specific names: neutral event, class and storage-key prefixes (`comments:*`, `cmt-*`), and the licence holder is Gavin Wye. ([#9](https://github.com/gavinwye/notis.gavinwye.com/pull/9))
 
+[0.4.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/gavinwye/notis.gavinwye.com/releases/tag/v0.3.2
 [0.3.1]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/gavinwye/notis.gavinwye.com/compare/v0.2.0...v0.3.0
