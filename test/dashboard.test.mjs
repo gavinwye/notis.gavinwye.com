@@ -63,7 +63,8 @@ test("summary: counts per page, newest title and url, no note text", async () =>
   assert.equal(contact.title, "");
   assert.equal(contact.url, "");
   assert.ok(nat.latest > 0);
-  assert.deepEqual(Object.keys(nat).sort(), ["latest", "open", "pageId", "resolved", "title", "url"]);
+  assert.equal(nat.openAt.length, 1); // when each open note was left, for "new since you last looked"
+  assert.deepEqual(Object.keys(nat).sort(), ["latest", "open", "openAt", "pageId", "resolved", "title", "url"]);
 });
 
 test("dashboard: served as HTML with a fresh nonce, no token needed", async () => {

@@ -38,7 +38,7 @@ main{padding-bottom:80px}
 .hero{padding:56px 0 32px}
 h1{margin:0 0 20px;font-size:clamp(36px,6vw,56px);line-height:1.18;font-weight:700;text-wrap:balance;isolation:isolate}
 h1 mark{position:relative;z-index:-1;background:var(--mark);color:inherit;border-bottom:3px solid var(--markline);padding:0 .08em}
-.lede{margin:0;font-size:22px;color:var(--muted);max-width:34em}
+.lede{margin:0;font-size:24px;font-weight:600;color:var(--ink);max-width:34em;overflow-wrap:anywhere}
 .totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:36px}
 .total{background:var(--tint);border:1px solid var(--line);padding:16px 18px}
 .num{font-weight:700;font-size:34px;line-height:1.1}
@@ -52,11 +52,13 @@ h1 mark{position:relative;z-index:-1;background:var(--mark);color:inherit;border
 .btn{font-weight:600;font-size:17px;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;border-radius:0;padding:8px 14px;min-height:44px;cursor:pointer}
 .btn[disabled]{opacity:.6;cursor:default}
 .note-status{min-height:1.55em;margin:0 0 12px;font-size:16px;color:var(--muted)}
-section.group{padding:28px 0 8px;border-top:1px solid var(--line)}
+section.group{padding:28px 0 8px;border-top:2px solid var(--ink)}
 section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.01em}
 .grouphead{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
 .count{font-size:17px;color:var(--muted)}
 .page{border-bottom:1px solid var(--line)}
+.page:last-child{border-bottom:0}
+.new{font-weight:700;color:var(--ink)}
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 0}
 .badge{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:var(--ink);color:var(--paper);font-weight:700;font-size:16px;flex:none}
 .name{flex:1 1 260px;display:flex;flex-direction:column;align-items:flex-start;min-height:44px;padding:0;background:none;border:0;text-align:left;cursor:pointer;color:var(--ink);font-size:19px;justify-content:center}
@@ -85,6 +87,8 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
 .gate p{margin:0}
 .empty{padding:24px 0;color:var(--muted)}
 .foot{margin:32px 0 0;font-size:15px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px}
+.foot p{margin:0 0 8px}
+.foot .linkbtn{font-size:17px;min-height:44px}
 @media (max-width:560px){.hero{padding:32px 0 24px}.lede{font-size:19px}.tabs{width:100%}.btn{width:100%}}
 @media (prefers-reduced-motion:no-preference){a,.linkbtn{transition:background-color .1s}}
 </style>
@@ -94,7 +98,7 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
 <main class="wrap">
 <div class="hero">
 <h1>Every note, <mark>on every page</mark>.</h1>
-<p class="lede">See where people have left notes on your site and go straight to them.</p>
+<p class="lede" id="site"></p>
 </div>
 
 <form class="gate" id="gate" hidden>
@@ -118,14 +122,16 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
 <button class="tab" type="button" data-filter="resolved" aria-pressed="false">Resolved</button>
 </div>
 <label class="search"><span class="vh">Search notes, names or pages</span><input type="search" id="q" placeholder="Search notes, names or pages" autocomplete="off"></label>
-<button class="btn" type="button" id="export">Export as Markdown</button>
 </div>
 <p class="note-status" id="progress"></p>
 <div id="list"></div>
 </div>
 
 <p id="loading" class="empty">Loading notes</p>
-<p class="foot" id="foot">Notes load from your own server.</p>
+<div class="foot">
+<p id="exportrow" hidden><button class="linkbtn" type="button" id="export">Export as Markdown</button></p>
+<p id="foot">Notes load from your own server.</p>
+</div>
 </main>
 <div class="vh" role="status" aria-live="polite" id="live"></div>
 <script nonce="__NONCE__">
@@ -133,7 +139,8 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
   "use strict";
   var base = location.pathname.replace(/\/dashboard\/?$/, "");
   var KEY = "notis:dashboard-token";
-  var state = { rows: [], notes: {}, loadingKey: {}, failed: {}, open: {}, replying: {}, busy: {}, err: {}, filter: "open", query: "", allLoaded: false, allLoading: false };
+  var SEEN = "notis:dashboard-seen";
+  var state = { prevSeen: {}, seen: readSeen(), rows: [], notes: {}, loadingKey: {}, failed: {}, open: {}, replying: {}, busy: {}, err: {}, filter: "open", query: "", allLoaded: false, allLoading: false };
   var $ = function (id) { return document.getElementById(id); };
 
   function h(tag, cls, text) {
@@ -148,6 +155,32 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
   function savedName() { try { return (localStorage.getItem("comments:author") || "").trim(); } catch (e) { return ""; } }
   function saveName(n) { try { localStorage.setItem("comments:author", n); } catch (e) { /* blocked */ } }
   function plural(n, w) { return n + " " + w + (n === 1 ? "" : "s"); }
+
+  function readSeen() { try { return JSON.parse(localStorage.getItem(SEEN)) || {}; } catch (e) { return {}; } }
+  // A note is new to this browser when it was left after the last time this page was opened here.
+  // Compared with the server's own clock (row.latest), so the two clocks never need to agree.
+  function unread(row) {
+    var seen = state.seen[row.pageId] || 0;
+    return (row.openAt || []).filter(function (t) { return t > seen; }).length;
+  }
+  function markSeen(row) {
+    if (!(row.pageId in state.prevSeen)) state.prevSeen[row.pageId] = state.seen[row.pageId] || 0;
+    state.seen[row.pageId] = row.latest;
+    try { localStorage.setItem(SEEN, JSON.stringify(state.seen)); } catch (e) { /* blocked */ }
+  }
+  // The site's name: what most page titles end with after " | ", else the host.
+  function siteName() {
+    var counts = {}, best = "", top = 0;
+    state.rows.forEach(function (r) {
+      var parts = String(r.title || "").split(/\s[|\u2013\u2014-]\s/);
+      if (parts.length < 2) return;
+      var name = parts[parts.length - 1].trim();
+      if (!name) return;
+      counts[name] = (counts[name] || 0) + 1;
+      if (counts[name] > top) { top = counts[name]; best = name; }
+    });
+    return best || location.host;
+  }
 
   function api(path, method, body) {
     var headers = {};
@@ -266,7 +299,8 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
   function noteItem(row, n) {
     var li = h("li");
     li.appendChild(h("div", "target", noteTarget(n)));
-    var meta = n.author + " \u00b7 " + when(n.createdAt) + (n.replies && n.replies.length ? " \u00b7 " + n.replies.length + (n.replies.length === 1 ? " reply" : " replies") : "");
+    var isNew = row.pageId in state.prevSeen && n.createdAt > state.prevSeen[row.pageId];
+    var meta = (isNew ? "New \u00b7 " : "") + n.author + " \u00b7 " + when(n.createdAt) + (n.replies && n.replies.length ? " \u00b7 " + n.replies.length + (n.replies.length === 1 ? " reply" : " replies") : "");
     li.appendChild(h("div", "meta", meta));
     li.appendChild(h("div", "text", n.text));
     if (n.replies && n.replies.length) {
@@ -353,10 +387,13 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
     var nm = h("button", "name"); nm.type = "button"; nm.setAttribute("data-k", "n:" + id);
     nm.setAttribute("aria-expanded", expanded ? "true" : "false"); nm.setAttribute("aria-controls", "notes-" + id.replace(/[^a-z0-9]/gi, "_"));
     nm.appendChild(h("span", "pn", d.name));
-    nm.appendChild(h("span", "pp", d.path + " \u00b7 " + c.open + " open, " + c.resolved + " resolved"));
+    var pp = h("span", "pp", d.path + " \u00b7 " + c.open + " open, " + c.resolved + " resolved");
+    var fresh = unread(row);
+    if (fresh) { pp.appendChild(document.createTextNode(", ")); pp.appendChild(h("span", "new", fresh + " new")); }
+    nm.appendChild(pp);
     var tb = h("button", "linkbtn", expanded ? "Hide notes" : "Show notes"); tb.type = "button"; tb.setAttribute("data-k", "b:" + id);
     tb.setAttribute("aria-label", (expanded ? "Hide notes on " : "Show notes on ") + d.name);
-    var toggle = function (k) { return function () { state.open[id] = !state.open[id]; if (state.open[id]) loadNotes(row).then(function () { render(); }); render(k); }; };
+    var toggle = function (k) { return function () { state.open[id] = !state.open[id]; if (state.open[id]) markSeen(row); if (state.open[id]) loadNotes(row).then(function () { render(); }); render(k); }; };
     nm.addEventListener("click", toggle("n:" + id));
     tb.addEventListener("click", toggle("b:" + id));
     r.appendChild(badge); r.appendChild(nm);
@@ -462,6 +499,7 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
   function showGate(wrong) {
     $("loading").hidden = true; $("app").hidden = true; $("gate").hidden = false;
     var e = $("gate-err"); e.hidden = !wrong; e.textContent = wrong ? "That token was not accepted." : "";
+    $("exportrow").hidden = true;
     $("foot").textContent = "Only people with the admin token can see this page. The token stays in this tab and is not sent anywhere else.";
     $("token").focus();
   }
@@ -471,6 +509,9 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
       state.rows = rows;
       $("gate").hidden = true; $("loading").hidden = true; $("app").hidden = false;
       $("foot").textContent = "Notes load from your own server.";
+      $("exportrow").hidden = false;
+      $("site").textContent = siteName();
+      $("host").hidden = siteName() === location.host;
       render();
     }, function (err) {
       if (err.status === 403) { var had = !!token(); setToken(""); showGate(had); return; }
@@ -481,6 +522,7 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
   }
 
   $("host").textContent = location.host;
+  $("site").textContent = location.host;
   $("gate").addEventListener("submit", function (e) {
     e.preventDefault();
     var v = $("token").value.trim();

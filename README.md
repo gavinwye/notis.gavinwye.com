@@ -170,7 +170,8 @@ Every note, on every page, in one place. The API serves a page at `/api/comments
 - **Nothing to install.** The page comes from the same server file as the API, on all four hosts. It makes no requests to anyone else, and has no tracking.
 - **Page titles and links.** The widget now sends each page's title and address with a new note. Notes left before this have neither: they appear under their path (or "Other") with no "Open page" link until someone leaves a new note on that page.
 - **Go to note** opens the page with `?notis=1` (which turns on a site that uses [reviewer activation](#options)) and `#notis-<id>`, which opens the panel on that note.
-- **Export as Markdown** copies the notes you are looking at (Open, All or Resolved) as Markdown, one heading per page.
+- **New notes.** Each page shows how many open notes were left since you last opened it in this browser. This is remembered in the browser only, not on the server.
+- **Export as Markdown**, a link at the bottom of the page, copies the notes you are looking at (Open, All or Resolved) as Markdown, one heading per page.
 - The page summary reads every note. That is fine for hundreds; with thousands, expect it to take a moment.
 
 Turn on the link in the panel with `data-dashboard="true"` or `dashboard: true` in `COMMENTS_CONFIG`.
@@ -306,7 +307,7 @@ Open an issue on GitHub: [report a bug](https://github.com/gavinwye/notis.gavinw
 |---|---|---|
 | `GET /api/comments?page=<pageId>` | | `[thread, ...]` for one page |
 | `GET /api/comments` | | every thread (admin token required) |
-| `GET /api/comments?summary=1` | | `[{ pageId, title, url, open, resolved, latest }, ...]`, one row per page, no note text (admin token, or anyone with `COMMENTS_DASHBOARD=public`) |
+| `GET /api/comments?summary=1` | | `[{ pageId, title, url, open, resolved, latest, openAt }, ...]`, one row per page (`openAt` is when each open note was left), no note text (admin token, or anyone with `COMMENTS_DASHBOARD=public`) |
 | `GET /api/comments/dashboard` | | the [notes dashboard](#notes-dashboard), an HTML page. Always served; the data calls it makes are the gated part |
 | `POST /api/comments` | `{ pageId, title?, url?, quote, prefix, suffix, author, text, pin? }` | the new thread. `url` is kept only if it starts with `/` (not `//`), `http://` or `https://` |
 | `POST /api/comments/:id/replies` | `{ author, text }` | the new reply |

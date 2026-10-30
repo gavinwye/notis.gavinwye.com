@@ -4,7 +4,7 @@
 // adapter that supplies `storage` and the settings.
 //
 //   GET    {base}?page=<pageId>      -> [thread, ...]   (all threads if no page)
-//   GET    {base}?summary=1          -> [{pageId,title,url,open,resolved,latest}, ...]  (no note text)
+//   GET    {base}?summary=1          -> [{pageId,title,url,open,resolved,latest,openAt}, ...]  (no note text)
 //   GET    {base}/dashboard          -> the notes dashboard (an HTML page; the data calls are gated)
 //   POST   {base}                    body:{pageId[,title,url],quote,prefix,suffix,author,text[,pin]} -> thread
 //   POST   {base}/:id/replies        body:{author,text} -> reply
@@ -41,8 +41,8 @@ const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 function summarise(threads) {
   const pages = new Map();
   for (const t of [...threads].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))) {
-    const row = pages.get(t.pageId) || { pageId: t.pageId, title: "", url: "", open: 0, resolved: 0, latest: 0 };
-    if (t.resolved) row.resolved += 1; else row.open += 1;
+    const row = pages.get(t.pageId) || { pageId: t.pageId, title: "", url: "", open: 0, resolved: 0, latest: 0, openAt: [] };
+    if (t.resolved) row.resolved += 1; else { row.open += 1; row.openAt.push(Number(t.createdAt) || 0); }
     if (t.title) row.title = t.title;
     if (t.url) row.url = t.url;
     row.latest = Math.max(row.latest, Number(t.createdAt) || 0, ...(t.replies || []).map((r) => Number(r.createdAt) || 0));
