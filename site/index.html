@@ -216,13 +216,15 @@
 </main>
 
 <footer>
-  <div class="wrap">Made by <a href="https://gavinwye.com">Gavin Wye</a>. MIT licensed. <a href="/privacy.html">Privacy</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com">Source on GitHub</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml">Report a bug</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=feature_request.yml">Request a feature</a>. <a href="/version.json">Version <span id="site-version">0.2</span></a>, <a href="https://github.com/gavinwye/notis.gavinwye.com/blob/main/CHANGELOG.md">changelog</a>.</div>
+  <div class="wrap">Made by <a href="https://gavinwye.com">Gavin Wye</a>. MIT licensed. <a href="/privacy.html">Privacy</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com">Source on GitHub</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=bug_report.yml">Report a bug</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com/issues/new?template=feature_request.yml">Request a feature</a>. <a href="https://github.com/gavinwye/notis.gavinwye.com/releases" id="site-version-link">Version <span id="site-version">0.2</span></a>, <a href="https://github.com/gavinwye/notis.gavinwye.com/blob/main/CHANGELOG.md">changelog</a>.</div>
 </footer>
 
 <script>
   // The footer shows the version that was built: /version.json is written by the build.
   fetch("/version.json").then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
     if (v && v.version) document.getElementById("site-version").textContent = v.version;
+    // The footer link goes to that version's release notes; /version.json is linked from the install section.
+    if (v && v.version) document.getElementById("site-version-link").href = "https://github.com/gavinwye/notis.gavinwye.com/releases/tag/v" + v.version;
     if (v && v.version) document.querySelectorAll(".js-version").forEach(function (e) { e.textContent = v.version; });
     if (v && v.integrity) document.querySelectorAll(".js-hash").forEach(function (e) { e.textContent = String(v.integrity).replace(/^sha384-/, ""); });
   }).catch(function () { /* keep the fallback text */ });
