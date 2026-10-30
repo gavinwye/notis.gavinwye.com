@@ -96,7 +96,7 @@ export function renderChangelogPage(md, { version } = {}) {
 <header><a href="/">← Notis</a></header>
 <main>
   <h1>Changelog</h1>
-  <p class="lede">What changed in each version. Each version starts by saying whether the widget, the server or both changed, so you know which of your files to replace.${version ? ` The current version is ${esc(version)}.` : ""}</p>
+  <p class="lede">What changed in each version, in plain English. Notis has two files you copy: the script on your pages (<code>comments.js</code>), which adds the Notis button, and the server file, which stores the notes. Each version says in short what is new, then what to do: which of the two files to replace.${version ? ` The current version is ${esc(version)}.` : ""}</p>
 ${renderChangelogBody(md)}
 </main>
 <footer>Notis is open source and MIT licensed. <a href="https://github.com/gavinwye/notis.gavinwye.com">View the source</a>.</footer>

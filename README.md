@@ -191,7 +191,7 @@ Update Notis in this site. Follow the instructions at https://notis.gavinwye.com
 To check by hand:
 
 - **Which version do I have?** Type `NotisVersion` in the browser console, or read the `var VERSION = "…"` line at the top of `comments.js`. The server files have no version line; `update.md` explains how to match them against a release.
-- **What's the latest?** `https://notis.gavinwye.com/version.json`, the [GitHub releases](https://github.com/gavinwye/notis.gavinwye.com/releases) (watch the repository for releases to be told), and the [changelog](CHANGELOG.md). Each changelog entry begins with **Widget: yes/no. Server: yes/no.** so you can see which of your files must be replaced.
+- **What's the latest?** `https://notis.gavinwye.com/version.json`, the [GitHub releases](https://github.com/gavinwye/notis.gavinwye.com/releases) (watch the repository for releases to be told), and the [changelog](CHANGELOG.md). Each changelog entry begins with **In short** (what changed, in plain English) and **What to do** (which of your two files to replace: the script on your pages, the server file, or both).
 - **npm:** the package is prepared but not published yet. Once it is, `npm update @gavinwye/notis` (or Dependabot or Renovate) will bring updates as pull requests.
 
 ## Run your own server
