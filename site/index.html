@@ -69,6 +69,7 @@
   .try { background:var(--tint); border:1px solid var(--line); border-left:4px solid var(--markline); padding:16px 20px; font-size:18px; margin:0 0 8px; }
   .try b { font-weight:600; }
   .small { font-size:16px; color:var(--muted); margin:8px 0 0; }
+  #dashboard code { overflow-wrap:anywhere; }
   section { padding:36px 0; border-top:1px solid var(--line); }
   h2 { font-family:var(--display); font-weight:700; font-size:34px; line-height:1.08; margin:0 0 14px; letter-spacing:-.01em; }
   p { margin:0 0 16px; }
@@ -128,6 +129,7 @@
     </button>
     <nav aria-label="On this page" id="site-nav">
       <a href="#how-it-works">How it works</a>
+      <a href="#dashboard">Dashboard</a>
       <a href="#add-it-to-a-page">Add it to a page</a>
       <a href="#what-it-doesnt-do">What it doesn't do</a>
       <a href="https://github.com/gavinwye/notis.gavinwye.com">GitHub</a>
@@ -168,6 +170,14 @@
     <p class="small">Try it on the wireframe above. Pins are saved in your browser only.</p>
   </section>
 
+  <section id="dashboard">
+    <h2>See every note in one place</h2>
+    <p>The dashboard lists every page that has notes: how many are open, how many are resolved, and how many are new since you last looked. Open a page to read its notes, reply, resolve them, or jump straight to the words they are about. Export what you are looking at as Markdown.</p>
+    <p><a href="/demo/dashboard/"><b>Try the dashboard</b></a>. It uses invented notes, runs in your browser and saves nothing.</p>
+    <p><a href="/demo/dashboard/"><img src="dashboard.png" alt="The Notis dashboard: totals for open notes, pages and resolved notes, then pages grouped by section, with one page opened to show its notes" width="1000" height="1025" loading="lazy" style="max-width:100%;height:auto;border:2px solid var(--ink);display:block"></a></p>
+    <p class="small">The dashboard is part of the server you already run, so there is nothing more to install. It is private by default and asks for your admin token. If your notes aren't private you can open it to anyone with one setting, <code>COMMENTS_DASHBOARD=public</code>.</p>
+  </section>
+
   <section id="add-it-to-a-page">
     <h2>Add it to a page</h2>
     <p>Copy one file into your site, then add one line before <code>&lt;/body&gt;</code>. The file runs from your own server, so your visitors never contact this site.</p>
@@ -200,6 +210,8 @@
     <div class="cols">
       <div><h3>Anchored to text</h3><p>Notes find their words again when the page loads, and survive small edits.</p></div>
       <div><h3>Replies</h3><p>Replies, resolve and reopen, and a toggle for resolved ones.</p></div>
+      <div><h3>A dashboard</h3><p>Every page with notes in one list, with counts and a link to each note. <a href="/demo/dashboard/">Try it</a>.</p></div>
+      <div><h3>Take it with you</h3><p>Copy a page's notes as Markdown or download them as JSON, from the panel or the dashboard.</p></div>
       <div><h3>No accounts</h3><p>People type a name. You decide who can load the page.</p></div>
       <div><h3>One file, no dependencies</h3><p>The widget injects its own styles. It works with any site, any framework.</p></div>
     </div>

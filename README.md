@@ -166,6 +166,8 @@ Every note, on every page, in one place. The API serves a page at `/api/comments
 
 ![The notes dashboard: totals, filters, and pages grouped by section with their notes](docs/images/dashboard.png)
 
+[Try the dashboard](https://notis.gavinwye.com/demo/dashboard/) with invented notes. It runs in your browser and saves nothing.
+
 - **Who can see it.** By default only someone with the admin token (`COMMENTS_ADMIN_TOKEN`). The page asks for it, keeps it in that browser tab only, and sends it only to your own server. Set `COMMENTS_DASHBOARD=public` to let anyone with the link read the page list and counts. Note text is still only fetched one page at a time, as the widget does. **Public means anyone can learn which pages have notes and what those notes say**, so leave it off unless the notes are not private.
 - **Nothing to install.** The page comes from the same server file as the API, on all four hosts. It makes no requests to anyone else, and has no tracking.
 - **Page titles and links.** The widget now sends each page's title and address with a new note. Notes left before this have neither. If the page id is the path (the default) they still get an "Open page" link and sit under their path; a custom page id such as `homepage` has no address, so it sits under "Other" with no link until someone leaves a new note on that page.
