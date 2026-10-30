@@ -132,6 +132,7 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
 <div class="foot">
 <p id="exportrow" hidden><button class="linkbtn" type="button" id="export">Export as Markdown</button></p>
 <p id="foot">Notes load from your own server.</p>
+<p>Made with <a href="https://notis.gavinwye.com" rel="noopener">Notis</a></p>
 </div>
 </main>
 <div class="vh" role="status" aria-live="polite" id="live"></div>
@@ -229,7 +230,8 @@ section.group h2{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-
   }
   // The address to open: the stored url with the Notis switch on, optionally pointing at one note.
   function link(row, noteId) {
-    var u = row.url;
+    // Older notes stored no address; by default the page id is the path, so it can stand in.
+    var u = row.url || row.pageId;
     if (!u || !/^(\/(?![\/\\])|https?:\/\/)/i.test(u)) return "";
     u = u.split("#")[0];
     if (!/[?&]notis=1(&|$)/.test(u)) u += (u.indexOf("?") === -1 ? "?" : "&") + "notis=1";

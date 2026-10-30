@@ -6,8 +6,11 @@ All notable changes to Notis. The format follows [Keep a Changelog](https://keep
 
 **Widget: yes. Server: yes.**
 
+### Changed
+- The Notes button and panel title now say Notis (a site that sets its own `noun` keeps its own word).
+
 ### Added
-- A notes dashboard: one page, served by the API at `/api/comments/dashboard`, that lists every page with notes, with open and resolved counts, filters, search, Go to note, Reply, Resolve and Export as Markdown. It needs the admin token unless `COMMENTS_DASHBOARD=public`. Replace the server file to get it; the widget's new `dashboard` option adds an "All pages" link. ([#94](https://github.com/gavinwye/notis.gavinwye.com/issues/94))
+- A notes dashboard: one page, served by the API at `/api/comments/dashboard`, that lists every page with notes, with open and resolved counts, filters, search, Go to note, Reply, Resolve and Export as Markdown. It needs the admin token unless `COMMENTS_DASHBOARD=public`. Replace the server file to get it; the widget's new `dashboard` option adds an "All notes" link. ([#94](https://github.com/gavinwye/notis.gavinwye.com/issues/94))
 - New notes store the page title and address, so the dashboard can name and link each page. Older notes keep working and show under their path. A note can be opened from a link ending `#notis-<id>`. ([#94](https://github.com/gavinwye/notis.gavinwye.com/issues/94))
 - `GET /api/comments?summary=1`: one row per page with counts and no note text, for the dashboard. ([#94](https://github.com/gavinwye/notis.gavinwye.com/issues/94))
 - A Vercel adapter backed by a private Vercel Blob store, with a full storage round-trip test. ([#38](https://github.com/gavinwye/notis.gavinwye.com/issues/38))

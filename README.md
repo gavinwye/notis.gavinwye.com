@@ -116,7 +116,7 @@ Set them with a global before the script, or with `data-*` attributes on the tag
 | `noun` | `"note"` | What things left on the page are called on screen: Notes, Add a note, and so on. Set `"comment"` to get Comments and Add a comment. |
 | `dock` | `false` | Push the page over to make room for the panel, rather than covering it. |
 | `activation` | `null` | Optional reviewer gate: `{ query: "notis", hosts: ["*.netlify.app"] }`. A matching host or `?notis=1` enables Notis and remembers it; `?notis=0` disables it again. |
-| `dashboard` | `false` | Add an "All pages" link in the panel, to the [notes dashboard](#notes-dashboard). Needs the API; not shown with `apiBase: null`. |
+| `dashboard` | `false` | Add an "All notes" link in the panel header, to the [notes dashboard](#notes-dashboard). Needs the API; not shown with `apiBase: null`. |
 
 To keep Notis hidden on an ordinary production page but available to reviewers:
 
@@ -168,7 +168,7 @@ Every note, on every page, in one place. The API serves a page at `/api/comments
 
 - **Who can see it.** By default only someone with the admin token (`COMMENTS_ADMIN_TOKEN`). The page asks for it, keeps it in that browser tab only, and sends it only to your own server. Set `COMMENTS_DASHBOARD=public` to let anyone with the link read the page list and counts. Note text is still only fetched one page at a time, as the widget does. **Public means anyone can learn which pages have notes and what those notes say**, so leave it off unless the notes are not private.
 - **Nothing to install.** The page comes from the same server file as the API, on all four hosts. It makes no requests to anyone else, and has no tracking.
-- **Page titles and links.** The widget now sends each page's title and address with a new note. Notes left before this have neither: they appear under their path (or "Other") with no "Open page" link until someone leaves a new note on that page.
+- **Page titles and links.** The widget now sends each page's title and address with a new note. Notes left before this have neither. If the page id is the path (the default) they still get an "Open page" link and sit under their path; a custom page id such as `homepage` has no address, so it sits under "Other" with no link until someone leaves a new note on that page.
 - **Go to note** opens the page with `?notis=1` (which turns on a site that uses [reviewer activation](#options)) and `#notis-<id>`, which opens the panel on that note.
 - **New notes.** Each page shows how many open notes were left since you last opened it in this browser. This is remembered in the browser only, not on the server.
 - **Export as Markdown**, a link at the bottom of the page, copies the notes you are looking at (Open, All or Resolved) as Markdown, one heading per page.

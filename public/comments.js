@@ -29,7 +29,7 @@
      pins      true to let reviewers drop a pin on an image   (default true)
      noun      what a thing left on the page is called        (default "note";
                set "comment" for Comments / Add a comment)
-     dashboard true to add an "All pages" link in the panel, to the notes
+     dashboard true to add an "All notes" link in the panel header, to the notes
                dashboard served by the API at {apiBase}/comments/dashboard  (default false)
      activation optional { query, hosts } reviewer gate. A matching host or
                ?<query>=1 enables Notis and remembers it in this browser;
@@ -116,6 +116,8 @@
   // A site that prefers "comment" sets noun: "comment". The plural adds an s.
   var NOUN = String(COMMENTS_CONFIG.noun || "").trim().toLowerCase() || "note";
   var NOUNS = NOUN + "s";
+  // The button and panel carry the product name; a site that sets its own noun keeps its own word.
+  var LABEL = NOUN === "note" ? "Notis" : NOUNS.charAt(0).toUpperCase() + NOUNS.slice(1);
   function cap(w) { return w.charAt(0).toUpperCase() + w.slice(1); }
 
   /* ---------- storage adapters (async, Promise-based) ---------- */
@@ -599,7 +601,7 @@
       '.cmt-composer textarea{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;resize:vertical;min-height:72px;box-sizing:border-box;outline:0}.cmt-composer input{width:100%;font:inherit;font-size:14px;border:0;background:#f3f2f1;color:#0b0c0c;padding:8px;margin:0 0 10px;box-sizing:border-box;outline:0}.cmt-composer input:focus{box-shadow:inset 0 -3px 0 #ffc726}.cmt-composer input.cmt-invalid{box-shadow:inset 0 -3px 0 #b3261e}.cmt-composer .cmt-label{display:block;font-size:14px;font-weight:600;color:#0b0c0c;margin:0 0 6px}' +
       '.cmt-composer .cmt-row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}' +
       '.cmt-pinghost{position:absolute;z-index:9002;width:28px;height:28px;margin:-14px 0 0 -14px;border:3px dashed #0b0c0c;background:rgba(255,199,38,.6);border-radius:50%;pointer-events:none}' +
-      '.cmt-error{font-size:13px;color:#8a1c14;margin:6px 0 0}.cmt-error .cmt-link{font-size:13px}.cmt-help{font-size:12px;color:#505a5f;margin:0 0 8px}.cmt-alllink{display:inline-block;margin:0 0 8px;font-size:13px;font-weight:600;color:inherit;text-decoration:underline #ffc726 2px;text-underline-offset:3px}.cmt-sub .cmt-selpanel{margin-left:auto;background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline #ffc726 2px;text-underline-offset:3px;min-height:24px;padding:2px 4px}' +
+      '.cmt-error{font-size:13px;color:#8a1c14;margin:6px 0 0}.cmt-error .cmt-link{font-size:13px}.cmt-help{font-size:12px;color:#505a5f;margin:0 0 8px}.cmt-alllink{font-size:13px;font-weight:600;color:inherit;text-decoration:underline #0b0c0c 2px;text-underline-offset:3px}.cmt-head .cmt-alllink{display:inline-flex;align-items:center;min-height:36px}.cmt-sub .cmt-selpanel{margin-left:auto;background:none;border:0;color:#0b0c0c;font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline #ffc726 2px;text-underline-offset:3px;min-height:24px;padding:2px 4px}' +
       '@media (pointer:coarse){.cmt-help{display:none}}' +
       '.cmt-pin{position:absolute;z-index:9002;width:28px;height:28px;margin:-14px 0 0 -14px;padding:0;border-radius:50%;background:#ffc726;color:#0b0c0c;border:2px solid #0b0c0c;font:600 14px/1 var(--notis-font,"Barlow","Barlow Fallback",system-ui,-apple-system,"Segoe UI",sans-serif);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.35)}' +
       '.cmt-pin:hover{background:#ffd94d}.cmt-pin:focus-visible{outline:3px solid #0b0c0c;outline-offset:2px}.cmt-pin[data-resolved]{background:#eef0f2}' +
@@ -620,7 +622,7 @@
         '.cmt-head{padding:6px 8px 6px 16px;gap:8px}' +
         '.cmt-head h2{flex:1;min-width:0}' +
         '.cmt-head button{min-width:44px;min-height:44px}.cmt-head .cmt-close{width:44px;height:44px}.cmt-foot .cmt-footclose{min-height:44px}.cmt-foot{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}' +
-        '.cmt-head .cmt-pinbtn{padding:0 12px;font-size:15px}' +
+        '.cmt-head .cmt-pinbtn{padding:0 12px;font-size:15px}.cmt-head .cmt-alllink{min-height:44px;font-size:15px}' +
         '.cmt-sub{padding:0 8px 0 16px;font-size:16px;min-height:44px}' +
         '.cmt-sub .cmt-selpanel{min-height:44px;min-width:44px;font-size:15px}' +
         '.cmt-sub input{width:22px;height:22px;margin:0 10px 0 0;flex:none}' +
@@ -675,7 +677,7 @@
         '.cmt-panel,.cmt-composer{border:2px solid CanvasText}}';
     document.head.appendChild(css);
 
-    toggleBtn = el('button', 'cmt-toggle', cap(NOUNS));
+    toggleBtn = el('button', 'cmt-toggle', LABEL);
     toggleBtn.setAttribute('data-cmt', 'toggle');
     toggleBtn.setAttribute('aria-expanded', 'false'); toggleBtn.setAttribute('aria-controls', 'cmt-panel');
     toggleBtn.addEventListener('click', function () { panel.classList.contains('cmt-open') ? closePanel() : openPanel({ focus: true }); });
@@ -689,7 +691,7 @@
     panel.setAttribute('aria-labelledby', 'cmt-title'); panel.tabIndex = -1; panel.setAttribute('inert', '');
     trapTab(panel, isCompact);
     var head = el('div', 'cmt-head');
-    var h2 = el('h2', '', cap(NOUNS)); h2.id = 'cmt-title';
+    var h2 = el('h2', '', LABEL); h2.id = 'cmt-title';
     var close = el('button', 'cmt-close'); close.setAttribute('aria-label', 'Close ' + NOUNS); close.title = 'Close';
     var svgNS = 'http://www.w3.org/2000/svg', icon = document.createElementNS(svgNS, 'svg');
     icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('width', '20'); icon.setAttribute('height', '20'); icon.setAttribute('aria-hidden', 'true'); icon.setAttribute('focusable', 'false');
@@ -697,6 +699,11 @@
     xPath.setAttribute('d', 'M5 5l14 14M19 5L5 19'); xPath.setAttribute('stroke', 'currentColor'); xPath.setAttribute('stroke-width', '3'); xPath.setAttribute('stroke-linecap', 'square'); xPath.setAttribute('fill', 'none');
     icon.appendChild(xPath); close.appendChild(icon);
     close.addEventListener('click', closePanel); head.appendChild(h2);
+    if (COMMENTS_CONFIG.dashboard && COMMENTS_CONFIG.apiBase) {
+      var allNotes = el('a', 'cmt-alllink', 'All ' + NOUNS);
+      allNotes.href = COMMENTS_CONFIG.apiBase + '/comments/dashboard';
+      head.appendChild(allNotes);
+    }
     if (COMMENTS_CONFIG.pins) {
       pinBtn = el('button', 'cmt-pinbtn', 'Pin on image'); pinBtn.setAttribute('aria-pressed', 'false');
       pinBtn.addEventListener('click', function () { setPinMode(!pinMode); });
@@ -718,15 +725,10 @@
     var copy = el('button', '', 'Copy Markdown'); copy.type = 'button'; copy.addEventListener('click', copyExport);
     var download = el('button', '', 'Download JSON'); download.type = 'button'; download.addEventListener('click', downloadExport);
     exports.appendChild(copy); exports.appendChild(download);
-    var allPages = null;
-    if (COMMENTS_CONFIG.dashboard && COMMENTS_CONFIG.apiBase) {
-      allPages = el('a', 'cmt-alllink', 'All pages');
-      allPages.href = COMMENTS_CONFIG.apiBase + '/comments/dashboard';
-    }
     var closeBtn = el('button', 'cmt-btn cmt-footclose', 'Close');
     closeBtn.addEventListener('click', closePanel);
     var help = el('p', 'cmt-help', 'Keyboard: select text, then press Alt+Shift+C. Esc closes.');
-    foot.appendChild(exports); if (allPages) foot.appendChild(allPages); foot.appendChild(help); foot.appendChild(closeBtn);
+    foot.appendChild(exports); foot.appendChild(help); foot.appendChild(closeBtn);
     panel.appendChild(head); panel.appendChild(sub); panel.appendChild(listEl); panel.appendChild(foot);
     // On a phone, the bottom Close button would sit above the keyboard while someone
     // types a reply and eat the space they need. Hide it until the field loses focus.
@@ -805,7 +807,7 @@
   }
   function updateCount() {
     var n = threads.filter(function (t) { return !t.resolved; }).length;
-    toggleBtn.textContent = cap(NOUNS) + (n ? ' (' + n + ')' : '');
+    toggleBtn.textContent = LABEL + (n ? ' (' + n + ')' : '');
   }
 
   function threadLabel(t) {

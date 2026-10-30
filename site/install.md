@@ -201,7 +201,7 @@ Set before the script, or as `data-*` attributes on the tag:
 | `pins` | `true` | Allow pins on images. |
 | `noun` | `"note"` | What things left on the page are called on screen. Set `"comment"` for Comments and Add a comment. |
 | `activation` | unset | Optional reviewer gate: `{ query: "notis", hosts: ["*.netlify.app"] }`. A matching host or `?notis=1` enables it and remembers the choice; `?notis=0` disables it. |
-| `dashboard` | `false` | Add an "All pages" link in the panel to the notes dashboard at `{apiBase}/comments/dashboard`. |
+| `dashboard` | `false` | Add an "All notes" link in the panel header to the notes dashboard at `{apiBase}/comments/dashboard`. |
 
 For a review tool that stays hidden from ordinary visitors, set `activation`. Use the host pattern for deploy previews, the query flag for selected reviewers, or both. Explain that this hides the widget but is not authentication; protect the page and API separately when notes are private.
 

@@ -96,7 +96,8 @@ test("dashboard page: no HTML injection routes, no inline styles, no outside req
   assert.ok(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(/.test(html));
   assert.ok(!/style="/.test(html), "inline style attributes are blocked by the policy");
   // The only web-address text is the pattern that checks a stored url before linking to it.
-  assert.equal(html.match(/https?:\/\//g), null);
+  // The one real address is the Notis link in the footer, which is a link and not a request.
+  assert.deepEqual(html.match(/https?:\/\/[^"]+/g), ["https://notis.gavinwye.com"]);
   assert.ok(!/<(link|img|iframe)\b|<script src/.test(html));
 });
 
