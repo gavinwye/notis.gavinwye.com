@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { createNodeServer } from "../server/node.mjs";
 
 test("node adapter: a thread survives a restart, one file per thread", async () => {
+  process.env.COMMENTS_RATE_LIMIT = "0"; // this test sends 21 writes from one address
   const dir = await mkdtemp(join(tmpdir(), "notis-"));
   const start = () => new Promise((res) => { const s = createNodeServer({ dir, adminToken: "tok" }); s.listen(0, () => res(s)); });
   let s = await start();

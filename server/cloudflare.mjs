@@ -53,6 +53,8 @@ export default {
         maxThreadsPerPage: env.COMMENTS_MAX_THREADS_PER_PAGE,
         maxRepliesPerThread: env.COMMENTS_MAX_REPLIES_PER_THREAD,
         duplicateWindowMs: env.COMMENTS_DUPLICATE_WINDOW_MS,
+        rateLimit: env.COMMENTS_RATE_LIMIT,
+        rateWindowMs: env.COMMENTS_RATE_WINDOW_MS,
         dashboard: env.COMMENTS_DASHBOARD,
         basePath: "/api/comments",
       },

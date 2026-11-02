@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHandler, memoryStorage } from "../server/core.mjs";
 
-const make = (config = {}) => createHandler({ storage: memoryStorage(), config: { adminToken: "tok", ...config } });
+const make = (config = {}) => createHandler({ storage: memoryStorage(), config: { adminToken: "tok", rateLimit: "0", ...config } });
 const call = async (h, method, path, body, headers = {}) => {
   const r = await h(new Request("http://x" + path, {
     method, headers: { "content-type": "application/json", ...headers },
@@ -203,4 +203,28 @@ test("combined: concurrent replies and creates under the ceilings, and export st
   assert.equal((await call(h, "GET", "/api/comments?page=/b")).json.length, 10);
   assert.equal((await call(h, "GET", "/api/comments", undefined, { authorization: "Bearer tok" })).json.length, 11);
   assert.equal((await call(h, "GET", "/api/comments/%E0%A4%A", undefined, { authorization: "Bearer tok" })).status, 400);
+});
+
+test("rate limit: writes from one address are capped, then allowed again", async () => {
+  const h = make({ rateLimit: 3, rateWindowMs: 60_000 });
+  const ip = { "x-forwarded-for": "1.2.3.4" };
+  for (let i = 0; i < 3; i++) assert.equal((await call(h, "POST", "/api/comments", { pageId: "/a", text: "n" + i }, ip)).status, 201);
+  const blocked = await call(h, "POST", "/api/comments", { pageId: "/a", text: "n4" }, ip);
+  assert.equal(blocked.status, 429);
+  assert.ok(Number(blocked.headers.get("retry-after")) >= 1);
+  // another address, reads and the admin are not affected
+  assert.equal((await call(h, "POST", "/api/comments", { pageId: "/a", text: "other" }, { "x-forwarded-for": "5.6.7.8" })).status, 201);
+  assert.equal((await call(h, "GET", "/api/comments?page=/a", undefined, ip)).status, 200);
+  assert.equal((await call(h, "POST", "/api/comments", { pageId: "/a", text: "adm" }, { ...ip, authorization: "Bearer tok" })).status, 201);
+});
+
+test("rate limit: 0 turns it off", async () => {
+  const h = make({ rateLimit: "0" });
+  for (let i = 0; i < 30; i++) assert.equal((await call(h, "POST", "/api/comments", { pageId: "/a", text: "n" + i })).status, 201);
+});
+
+test("honeypot: a filled website field stores nothing", async () => {
+  const h = make();
+  assert.equal((await call(h, "POST", "/api/comments", { pageId: "/a", text: "spam", website: "http://x" })).status, 201);
+  assert.equal((await call(h, "GET", "/api/comments?page=/a")).json.length, 0);
 });

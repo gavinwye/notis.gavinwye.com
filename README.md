@@ -250,6 +250,8 @@ If it's on a different address from your site, give the widget the full URL (`ap
 | `COMMENTS_MAX_THREADS_PER_PAGE` | `500` | Refuse new threads after a page reaches this ceiling. |
 | `COMMENTS_MAX_REPLIES_PER_THREAD` | `1000` | Refuse new replies after a thread reaches this ceiling. |
 | `COMMENTS_DUPLICATE_WINDOW_MS` | `60000` | Reject a repeat of the same note (same author, same words or image spot, same text) or the same reply within this window. `0` turns the check off. |
+| `COMMENTS_RATE_LIMIT` | `20` | Writes (new notes, replies, resolves) allowed from one address per window. Over it, the API answers `429` with `Retry-After`. `0` turns it off. Admin requests are not limited. |
+| `COMMENTS_RATE_WINDOW_MS` | `60000` | The window for the limit above. |
 | `COMMENTS_DASHBOARD` | unset | Set `public` to let anyone read the [notes dashboard](#notes-dashboard) page list and counts. Unset, it needs the admin token. |
 | `COMMENTS_STORE` | `comments` | Netlify only: the blob store name. Use a different one for each site. |
 | `COMMENTS_DIR` | `./comments-data` | Node only: where the files go. |
@@ -257,7 +259,7 @@ If it's on a different address from your site, give the widget the full URL (`ap
 
 Each thread is stored on its own, and writes to one thread are queued, so two reviewers replying at the same moment don't overwrite each other. The queue lives inside one running copy of the server. On a host that can run several copies at once (Netlify functions, Workers) two requests that land on different copies can still race, and the ceilings above are a soft limit. That is fine for a handful of reviewers; for heavier use run the Node adapter as a single process.
 
-The built-in ceilings limit accidental floods, but public anonymous comments still need host-level rate limiting for determined abuse. Use Netlify's rate-limit rules, a Cloudflare rate-limiting rule, or your Node reverse proxy to cap `POST` requests to the comments API. If reviews must be private, protect the route with your host's authentication or access-control layer; a secret embedded in the browser widget would not be secret.
+The built-in per-address limit and the ceilings above stop accidental floods and simple bots. The limit is counted in memory inside each running copy, so on Netlify or Workers it is approximate, and it trusts the address your host or proxy reports, so a client that can reach the server directly can fake it. A hidden `website` field is a honeypot: a request that fills it is quietly dropped. For determined abuse you still need host-level rate limiting. Use Netlify's rate-limit rules, a Cloudflare rate-limiting rule, or your Node reverse proxy to cap `POST` requests to the comments API. If reviews must be private, protect the route with your host's authentication or access-control layer; a secret embedded in the browser widget would not be secret.
 
 ## Where your notes live
 

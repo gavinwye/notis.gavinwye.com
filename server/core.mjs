@@ -19,7 +19,7 @@
 //   remove(id): Promise<boolean>     true if it existed
 //   clear():  Promise<void>
 // }
-// config: { adminToken, allowedOrigins: string[], basePath: "/api/comments", dashboard: "public" | "" }
+// config: { adminToken, allowedOrigins: string[], basePath: "/api/comments", dashboard: "public" | "", rateLimit (writes per address per window, default 20, 0 = off), rateWindowMs (default 60000) }
 //   dashboard "public" lets anyone read the per-page summary; otherwise it needs the admin token.
 import { dashboardHtml } from "./dashboard.mjs";
 
@@ -65,6 +65,27 @@ export function createHandler({ storage, config = {} }) {
   const duplicateWindowMs = String(config.duplicateWindowMs).trim() === "0" ? 0 : positiveInt(config.duplicateWindowMs, 60_000);
   const publicDashboard = String(config.dashboard || "").trim().toLowerCase() === "public";
   const threadWrites = new Map();
+
+  // Per-address limit on writes (POST and PATCH), a fixed window kept in memory. 0 turns it off.
+  const rateLimit = String(config.rateLimit).trim() === "0" ? 0 : positiveInt(config.rateLimit, 20);
+  const rateWindowMs = positiveInt(config.rateWindowMs, 60_000);
+  const hits = new Map(); // address -> { start, count }
+  const clientIp = (req) => {
+    const h = req.headers;
+    return (h.get("x-nf-client-connection-ip") || h.get("cf-connecting-ip") || (h.get("x-forwarded-for") || "").split(",")[0] ||
+      h.get("x-real-ip") || "unknown").trim();
+  };
+  // Returns the seconds to wait if this address is over the limit, otherwise 0.
+  const overLimit = (req) => {
+    if (!rateLimit) return 0;
+    const now = Date.now();
+    if (hits.size > 5000) for (const [k, v] of hits) if (now - v.start >= rateWindowMs) hits.delete(k);
+    const ip = clientIp(req);
+    let row = hits.get(ip);
+    if (!row || now - row.start >= rateWindowMs) { row = { start: now, count: 0 }; hits.set(ip, row); }
+    row.count += 1;
+    return row.count > rateLimit ? Math.max(1, Math.ceil((row.start + rateWindowMs - now) / 1000)) : 0;
+  };
 
   // Serialize read-modify-write operations for each thread. Without this,
   // simultaneous replies can both read the same version and one gets lost.
@@ -158,11 +179,21 @@ export function createHandler({ storage, config = {} }) {
         return json(out);
       }
 
+      // Writes are limited per address. Admin requests are not.
+      if ((req.method === "POST" || req.method === "PATCH") && !isAdmin(req)) {
+        const wait = overLimit(req);
+        if (wait) {
+          return new Response(JSON.stringify({ error: "too many requests" }), { status: 429, headers: { ...cors, "Retry-After": String(wait) } });
+        }
+      }
+
       // ---- POST (create a thread) ----
       if (req.method === "POST" && seg.length === 0) {
         const parsed = await readJson(req);
         if (!parsed.ok) return badBody(parsed);
         const b = parsed.value || {};
+        // Honeypot: the widget never fills `website`. A bot that fills every field is told it worked and nothing is stored.
+        if (b.website) return json({ ok: true }, 201);
         const pageId = clip(b.pageId, LIMITS.pageId).trim();
         const title = clip(b.title, LIMITS.title).trim();
         const pageUrl = safeUrl(b.url);
@@ -212,6 +243,7 @@ export function createHandler({ storage, config = {} }) {
       if (req.method === "POST" && seg.length === 2 && seg[1] === "replies") {
         const parsed = await readJson(req);
         if (!parsed.ok) return badBody(parsed);
+        if ((parsed.value || {}).website) return json({ ok: true }, 201);
         const text = clip((parsed.value || {}).text, LIMITS.text).trim();
         if (!text) return json({ error: "text is required" }, 400);
         return withThreadWrite(seg[0], async () => {
