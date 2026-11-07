@@ -58,6 +58,8 @@ export function createNodeServer({ dir, adminToken, allowedOrigins, basePath, da
       maxThreadsPerPage: process.env.COMMENTS_MAX_THREADS_PER_PAGE,
       maxRepliesPerThread: process.env.COMMENTS_MAX_REPLIES_PER_THREAD,
       duplicateWindowMs: process.env.COMMENTS_DUPLICATE_WINDOW_MS,
+      rateLimit: process.env.COMMENTS_RATE_LIMIT,
+      rateWindowMs: process.env.COMMENTS_RATE_WINDOW_MS,
         dashboard: dashboard ?? process.env.COMMENTS_DASHBOARD,
       basePath: basePath || "/api/comments",
     },
@@ -69,8 +71,11 @@ export function createNodeServer({ dir, adminToken, allowedOrigins, basePath, da
       for await (const c of nreq) { size += c.length; if (size > 128 * 1024) { nres.writeHead(413).end(); return; } chunks.push(c); }
       const body = chunks.length ? Buffer.concat(chunks) : undefined;
       const host = nreq.headers.host || "localhost";
+      // With no proxy in front, the socket address is the client; behind one, its header is used.
+      const headers = { ...nreq.headers };
+      if (!headers["x-forwarded-for"] && !headers["x-real-ip"] && nreq.socket.remoteAddress) headers["x-real-ip"] = nreq.socket.remoteAddress;
       const req = new Request(`http://${host}${nreq.url}`, {
-        method: nreq.method, headers: nreq.headers,
+        method: nreq.method, headers,
         body: body && !["GET", "HEAD"].includes(nreq.method) ? body : undefined,
       });
       const res = await handle(req);

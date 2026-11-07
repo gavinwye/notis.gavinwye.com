@@ -159,6 +159,7 @@ If it's on a different address from the site, set `apiBase` to the full address 
 | Variable | Default | What it does |
 |---|---|---|
 | `COMMENTS_ADMIN_TOKEN` | unset | A long random string, for example `openssl rand -hex 32`. Needed to delete a note and to list the notes of all pages. If unset, those requests are refused. |
+| `COMMENTS_RATE_LIMIT` | `20` | Writes allowed per address per `COMMENTS_RATE_WINDOW_MS` (default 60000). Over it the API answers `429`. `0` turns it off. |
 | `COMMENTS_ALLOWED_ORIGINS` | unset (any) | The site's origins, comma separated, exact match. It is a browser CORS policy, not authentication: scripts that send no `Origin` are not blocked. |
 | `COMMENTS_MAX_THREADS_PER_PAGE` | `500` | Refuse new notes after a page reaches this many. |
 | `COMMENTS_MAX_REPLIES_PER_THREAD` | `1000` | Refuse new replies after a note reaches this many. |
